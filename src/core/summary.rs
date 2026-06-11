@@ -26,6 +26,25 @@ pub struct InfoLine {
     pub content: String,
 }
 
+/// A single test failure with identifying info.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestFailure {
+    pub suite: String,
+    pub test: Option<String>,
+    pub message: String,
+}
+
+/// Aggregated test results extracted from command output.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestResult {
+    pub total: u32,
+    pub passed: u32,
+    pub failed: u32,
+    pub errors: u32,
+    pub skipped: u32,
+    pub failures: Vec<TestFailure>,
+}
+
 /// Parsed summary of a command's output.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Summary {
@@ -47,6 +66,8 @@ pub struct Summary {
     pub output_tokens: usize,
     /// Ratio of output_tokens / input_tokens (0.0–1.0).
     pub compression_ratio: f64,
+    /// Extracted test results, if tests were detected in the output.
+    pub tests: Option<TestResult>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -83,6 +104,7 @@ impl Summary {
             input_tokens: 0,
             output_tokens: 0,
             compression_ratio: 1.0,
+            tests: None,
         }
     }
 

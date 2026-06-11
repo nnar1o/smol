@@ -1,5 +1,6 @@
 use assert_cmd::Command;
 use predicates::prelude::*;
+use tempfile::TempDir;
 
 /// Test that `smol --help` prints usage information.
 #[test]
@@ -43,8 +44,10 @@ fn test_no_args() {
 /// Test that `smol status last` when no tasks exist prints a message.
 #[test]
 fn test_status_last_no_tasks() {
+    let temp = TempDir::new().unwrap();
     let mut cmd = Command::cargo_bin("smol").unwrap();
-    cmd.arg("status").arg("last");
+    cmd.env("HOME", temp.path())
+        .arg("status").arg("last");
     cmd.assert()
         .failure()
         .stderr(predicate::str::contains("Error"));
@@ -53,7 +56,7 @@ fn test_status_last_no_tasks() {
 /// Test that `smol list` when no tasks exist says "No tasks found."
 #[test]
 fn test_list_no_tasks() {
-    let temp = assert_fs::TempDir::new().unwrap();
+    let temp = TempDir::new().unwrap();
     let mut cmd = Command::cargo_bin("smol").unwrap();
     cmd.env("HOME", temp.path())
         .arg("list");
@@ -65,7 +68,7 @@ fn test_list_no_tasks() {
 /// Test that `smol clean` when no tasks exist does not error.
 #[test]
 fn test_clean_no_tasks() {
-    let temp = assert_fs::TempDir::new().unwrap();
+    let temp = TempDir::new().unwrap();
     let mut cmd = Command::cargo_bin("smol").unwrap();
     cmd.env("HOME", temp.path())
         .arg("clean");
@@ -104,15 +107,17 @@ fn test_completion_fish() {
         .stdout(predicate::str::contains("__fish_smol_needs_command"));
 }
 
-/// Test that a known subcommand like "status" is handled.
+/// Test that `status` subcommand with no task-id defaults to "last" and fails with no tasks.
 #[test]
 fn test_status_subcommand() {
+    let temp = TempDir::new().unwrap();
     let mut cmd = Command::cargo_bin("smol").unwrap();
-    cmd.arg("status");
+    cmd.env("HOME", temp.path())
+        .arg("status");
     // Default to "last" if no task-id given
     cmd.assert()
         .failure()
-        .stderr(predicate::str::contains("Error").or(predicate::str::contains("no tasks")));
+        .stderr(predicate::str::contains("Error"));
 }
 
 /// Test that `smol log` without task-id prints error.
@@ -136,13 +141,14 @@ fn test_cancel_without_task_id() {
 }
 
 /// Test that an unknown subcommand is treated as a command to run.
+/// If the command doesn't exist, it should fail with an I/O error.
 #[test]
 fn test_unknown_subcommand_as_command() {
     let mut cmd = Command::cargo_bin("smol").unwrap();
     cmd.arg("nonexistent-command-xyz");
     cmd.assert()
-        .success()
-        .stdout(predicate::str::contains(""));
+        .failure()
+        .stderr(predicate::str::contains("Error"));
 }
 
 /// Test that `--sync` flag before a command is recognized.
@@ -195,12 +201,12 @@ fn test_completion_default() {
         .stdout(predicate::str::contains("_smol_completions"));
 }
 
-/// Test that `smol completion <unknown>` shows error.
+/// Test that `smol completion <unknown>` shows error and exits with code 1.
 #[test]
 fn test_completion_unknown_shell() {
     let mut cmd = Command::cargo_bin("smol").unwrap();
     cmd.arg("completion").arg("unknown-shell");
     cmd.assert()
-        .success()
+        .code(1)
         .stderr(predicate::str::contains("Unknown shell"));
 }

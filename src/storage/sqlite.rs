@@ -163,6 +163,11 @@ impl SqliteStorage {
                 input_tokens: row.get::<_, Option<i64>>(12)?.map(|t| t as usize),
                 output_tokens: row.get::<_, Option<i64>>(13)?.map(|t| t as usize),
                 compression_ratio: row.get(14)?,
+                test_total: None,
+                test_passed: None,
+                test_failed: None,
+                test_errors: None,
+                test_skipped: None,
             })
         });
 
@@ -477,6 +482,11 @@ fn row_to_meta(row: &rusqlite::Row) -> rusqlite::Result<TaskMeta> {
         input_tokens: row.get::<_, Option<i64>>(12)?.map(|t| t as usize),
         output_tokens: row.get::<_, Option<i64>>(13)?.map(|t| t as usize),
         compression_ratio: row.get(14)?,
+        test_total: None,
+        test_passed: None,
+        test_failed: None,
+        test_errors: None,
+        test_skipped: None,
     })
 }
 
@@ -512,6 +522,11 @@ mod tests {
             input_tokens: None,
             output_tokens: None,
             compression_ratio: None,
+            test_total: None,
+            test_passed: None,
+            test_failed: None,
+            test_errors: None,
+            test_skipped: None,
         }
     }
 

@@ -71,6 +71,12 @@ pub struct TaskMeta {
     pub output_tokens: Option<usize>,
     /// Compression ratio (output/input) if input > 0.
     pub compression_ratio: Option<f64>,
+    /// Test results extracted from command output (if tests ran).
+    pub test_total: Option<u32>,
+    pub test_passed: Option<u32>,
+    pub test_failed: Option<u32>,
+    pub test_errors: Option<u32>,
+    pub test_skipped: Option<u32>,
 }
 
 /// A runtime task handle (includes the actual process if still running).

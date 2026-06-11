@@ -28,10 +28,10 @@ pub fn init() {
     // SAFETY: libc::signal is safe to call with standard signal numbers.
     // The handler only performs an atomic store, which is signal-safe.
     unsafe {
-        if libc::signal(libc::SIGINT, handler as libc::sighandler_t) == libc::SIG_ERR {
+        if libc::signal(libc::SIGINT, handler as *const () as libc::sighandler_t) == libc::SIG_ERR {
             panic!("Failed to register SIGINT handler");
         }
-        if libc::signal(libc::SIGTERM, handler as libc::sighandler_t) == libc::SIG_ERR {
+        if libc::signal(libc::SIGTERM, handler as *const () as libc::sighandler_t) == libc::SIG_ERR {
             panic!("Failed to register SIGTERM handler");
         }
     }

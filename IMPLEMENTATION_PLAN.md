@@ -867,3 +867,70 @@ Plan jest **ambitny ale realistyczny**. Kluczowe decyzje:
 **Największe ryzyko**: zakres (66-101h). Sugeruję skupić się na Faza 1 (P1, ~30h) jako v0.2.0, a resztę jako v0.3.0+.
 
 **Największa szansa**: MCP Server + Hook do AI CLI + Task Management = unikalne połączenie, którego nie ma żaden konkurent. Squeez ma hooki i MCP, ale nie ma task managementu. Shelly ma MCP, ale nie ma TOML parserów ani tasków. **smol może być pierwszym toolem który ma wszystko.**
+
+---
+
+## 7. Raport implementacyjny — stan na 2026-06-11
+
+### 7.1 Podsumowanie wykonania
+
+| Faza | Zakres | Status | Testy | Uwagi |
+|------|--------|--------|-------|-------|
+| **Faza 1** (P1) | MCP Server, Token counting, 14 parserów TOML | ✅ **Zrobione** | 263 łącznie | Hand-rolled JSON-RPC, benchmark 5 scenariuszy, 20 parserów total |
+| **Faza 2** (P2) | SQLite, Testy, Shell completion, Homebrew | ✅ **Zrobione** | — | rusqlite bundled, 140+ nowych testów, bash/zsh/fish, formula + GH workflow |
+| **Faza 3** (P3) | Hooki, Signal, FTS, Export/Import, Git sync, Multi-tenancy | ✅ **Zrobione** | — | OpenCode JS + Claude Code sh, setsid daemon, smol search, JSON/MD export |
+| **+ Bonus** | Acceptance/test result parsing | ✅ **Zrobione** | — | Maven Surefire/Failsafe, Cargo test, Jest — TestResult w Summary, TestPattern w ParserConfig |
+
+### 7.2 Rzeczywiste KPIs vs plan
+
+| Miernik | Plan (cel) | Rzeczywisty | Uwagi |
+|---------|------------|-------------|-------|
+| Liczba parserów | 30+ | **20** | 6 oryginalnych + 14 nowych. Zamiast 10 kolejnych: parsowanie wyników testów |
+| Token reduction | >85% | **liczone** | `estimate_tokens()` przez chars/4, benchmark w `src/bench.rs` |
+| Test coverage | >90% | ~**85%** (szac.) | Pokryte: parsery, storage, CLI, mock, task lifecycle, search, export |
+| Liczba testów | 200+ | **263** | Unit (unit/), integration (integration/), E2E (e2e/) + doc-tests |
+| MCP integration | ✅ | ✅ | 6 narzędzi: run, status, log, list, cancel, clean |
+| Shell completion | ✅ bash/zsh/fish | ✅ | `smol completion bash\|zsh\|fish`, statyczne + dynamiczne task-id |
+| Package managers | cargo + homebrew + scoop | **cargo + homebrew** | Formula + update script + GH workflow; Scoop — do dodania |
+| AI CLI hooks | ✅ OpenCode + Claude Code | ✅ | `smol setup` (auto-detekcja), `smol uninstall` |
+| Obsługa sygnałów | ✅ SIGTERM/SIGINT | ✅ | `AtomicBool`, setsid, background survival przez SIGINT |
+
+### 7.3 Rzeczywiste godziny (szacowane)
+
+| Komponent | Godziny | Główne pliki |
+|-----------|---------|--------------|
+| MCP Server | ~6h | `src/mcp/`, `src/bin/smol-mcp.rs` |
+| Token counting + benchmark | ~3h | `src/core/summary.rs`, `src/bench.rs` |
+| 14 parserów TOML | ~4h | `parsers/*.toml` (20 plików) |
+| SQLite backend | ~5h | `src/storage/sqlite.rs` (730 linii) |
+| Shell completion | ~2h | `src/completions/` |
+| Homebrew + release workflow | ~2h | `homebrew/smol.rb`, `.github/workflows/` |
+| Hook do AI CLI | ~4h | `src/hook/` (OpenCode JS + Claude Code sh) |
+| Signal + daemonizacja | ~3h | `src/exec/signal.rs`, `src/exec/backgrounder.rs` |
+| Full-text search | ~2h | `src/storage/search.rs` |
+| Export/Import | ~2h | `src/storage/export.rs` |
+| Git sync + Multi-tenancy | ~2h | `src/config/sync.rs`, `src/storage/paths.rs` |
+| Acceptance/test result parsing | ~3h | `src/core/summary.rs`, `src/parse/engine.rs`, parsery Maven/Cargo/Jest |
+| Testy (140+ nowych) | ~6h | `tests/` (16 plików) |
+| **Razem** | **~44h** | Plan: 66-101h. Oszczędność: ręczny MCP zamiast crate'a, brak clap, brak scoop |
+
+### 7.4 Co jeszcze zostało (opcjonalnie)
+
+| # | Element | Priorytet | Czas |
+|---|---------|-----------|------|
+| 1 | **Scoop** pakiety (Windows) | Niski | 2h |
+| 2 | **10+ dodatkowych parserów** (cmake, pytest, ansible, gh, aws, find, psql, docker-compose, helm, biome) | Średni | 4-6h |
+| 3 | **clap migration** — zastąpić hand-rolled parser, lepszy --help, błędy, autocomplete | Niski (breaking) | 4-6h |
+| 4 | **Fuzzy completion przez fzf** (`smol **` + Tab) | Niski | 2-3h |
+| 5 | **Multi-tenancy demo** — `smol-smol` symlink, fixture acceptance test `mvn verify` | ✅ **Zrobione** | — |
+| 5 | **tiktoken-rs** — dokładniejsze liczenie tokenów (BPE cl100k_base) | Niski | 2h |
+| 6 | **CI na Windows** w GitHub Actions | Niski | 2h |
+| 7 | **code coverage** (cargo-tarpaulin lub cargo-llvm-cov) + badge | Niski | 2h |
+
+### 7.5 Wnioski
+
+- **Fazy 1-3 zrealizowane w ~44h** (vs planowane 66-101h). Oszczędność wynikła z: hand-rolled MCP zamiast crate'a, braku migracji na clap, pominięcia Scoop, skupienia na TOML (szybciej niż TypeScript/rust handlers).
+- **Bonus**: parsowanie wyników testów (acceptance tests) — feature który został dodany ad-hoc na życzenie.
+- **263 testy, 0 błędów** — jakość potwierdzona.
+- **20 parserów** — mniej niż cel 30+, ale zamiast kolejnych parserów dodano parsowanie testów i acceptance/surefire/failsafe.
+- **Homebrew**: formula gotowa, ale wymaga pierwszego release'a z pre-built binarkami (aktualny tag v0.1.0). Po pushnięciu tagu np. v0.2.0, uruchomi się workflow który zbuduje binary i zaktualizuje formulę.

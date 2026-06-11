@@ -77,6 +77,7 @@ mod tests {
                 max_warnings: 5,
                 show_error_lines: true,
             },
+            test_patterns: vec![],
         }
     }
 

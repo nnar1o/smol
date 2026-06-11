@@ -10,7 +10,6 @@ min_lines = 3
 
 ignore_patterns = [
     "^\\(?\\s*\\d+s$",
-    "^Tests:\\s+",
     "^Snapshots:\\s+",
     "^Time:\\s+",
     "^Ran all test suites",
@@ -52,6 +51,13 @@ failure = [
     { regex = "^FAIL\\s", group = "message" },
     { regex = "Tests:\\s+\\d+ failed", group = "message" },
 ]
+
+[[test_patterns]]
+# Jest test summary line
+# e.g. "Tests:       2 failed, 1 passed, 3 total"
+summary_regex = "Tests:\\s*(?:(?P<failures>\\d+)\\s+failed)?,?\\s*(?:(?P<passed>\\d+)\\s+passed)?,?\\s*(?:(?P<total>\\d+)\\s+total)?"
+# Individual test failures: e.g. "FAIL src/App.test.js"
+failure_regex = "FAIL\\s+(?P<suite>\\S+)"
 
 [summary]
 max_errors = 3

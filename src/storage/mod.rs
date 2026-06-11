@@ -2,6 +2,8 @@ pub mod registry;
 pub mod task_store;
 pub mod paths;
 pub mod sqlite;
+pub mod search;
+pub mod export;
 
 use crate::core::{SmolError, TaskId, TaskMeta, Task, TaskStatus};
 

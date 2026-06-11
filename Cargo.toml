@@ -24,3 +24,67 @@ path = "src/bin/smol-mcp.rs"
 assert_cmd = "2"
 predicates = "3"
 tempfile = "3"
+
+[[test]]
+name = "cli_test"
+path = "tests/e2e/cli_test.rs"
+
+[[test]]
+name = "modes_test"
+path = "tests/e2e/modes_test.rs"
+
+[[test]]
+name = "task_commands_test"
+path = "tests/e2e/task_commands_test.rs"
+
+[[test]]
+name = "parser_detection_test"
+path = "tests/integration/parser_detection_test.rs"
+
+[[test]]
+name = "maven_parser_test"
+path = "tests/integration/maven_parser_test.rs"
+
+[[test]]
+name = "cargo_parser_test"
+path = "tests/integration/cargo_parser_test.rs"
+
+[[test]]
+name = "gcc_parser_test"
+path = "tests/integration/gcc_parser_test.rs"
+
+[[test]]
+name = "npm_parser_test"
+path = "tests/integration/npm_parser_test.rs"
+
+[[test]]
+name = "python_parser_test"
+path = "tests/integration/python_parser_test.rs"
+
+[[test]]
+name = "go_parser_test"
+path = "tests/integration/go_parser_test.rs"
+
+[[test]]
+name = "generic_parser_test"
+path = "tests/integration/generic_parser_test.rs"
+
+[[test]]
+name = "storage_test"
+path = "tests/integration/storage_test.rs"
+
+[[test]]
+name = "task_id_test"
+path = "tests/unit/task_id_test.rs"
+
+[[test]]
+name = "config_test"
+path = "tests/unit/config_test.rs"
+
+[[test]]
+name = "summarizer_test"
+path = "tests/unit/summarizer_test.rs"
+
+[[test]]
+name = "heuristic_test"
+path = "tests/unit/heuristic_test.rs"

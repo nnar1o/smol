@@ -76,6 +76,11 @@ pub fn run_background(
         input_tokens: None,
         output_tokens: None,
         compression_ratio: None,
+        test_total: None,
+        test_passed: None,
+        test_failed: None,
+        test_errors: None,
+        test_skipped: None,
     };
 
     Ok((meta, child))

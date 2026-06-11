@@ -124,6 +124,11 @@ mod tests {
             input_tokens: None,
             output_tokens: None,
             compression_ratio: None,
+            test_total: None,
+            test_passed: None,
+            test_failed: None,
+            test_errors: None,
+            test_skipped: None,
         };
 
         let meta_content = toml::to_string_pretty(&meta).unwrap();

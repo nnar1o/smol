@@ -47,6 +47,10 @@ pub enum CliCommand {
     Setup { host: Option<String> },
     Uninstall { host: Option<String> },
     Completion { shell: String },
+    Search { query: String },
+    Export { task_id: Option<String>, format: Option<String> },
+    Import { path: String },
+    Parsers { action: String },
     #[cfg(debug_assertions)]
     Benchmark,
 }
@@ -123,6 +127,29 @@ pub fn parse_cli() -> CliCommand {
             let host = raw_args.get(1).cloned();
             CliCommand::Uninstall { host }
         }
+        "search" => {
+            let query = raw_args.get(1).cloned().unwrap_or_else(|| {
+                eprintln!("Error: search query required");
+                std::process::exit(1);
+            });
+            CliCommand::Search { query }
+        }
+        "export" => {
+            let task_id = raw_args.get(1).cloned();
+            let format = get_opt_value(&raw_args, "--format", "-f").unwrap_or_else(|| "json".to_string());
+            CliCommand::Export { task_id, format: Some(format) }
+        }
+        "import" => {
+            let path = raw_args.get(1).cloned().unwrap_or_else(|| {
+                eprintln!("Error: import path required");
+                std::process::exit(1);
+            });
+            CliCommand::Import { path }
+        }
+        "parsers" => {
+            let action = raw_args.get(1).cloned().unwrap_or_else(|| "list".to_string());
+            CliCommand::Parsers { action }
+        }
         "completion" => {
             let shell = raw_args.get(1).cloned().unwrap_or_else(|| "bash".to_string());
             CliCommand::Completion { shell }
@@ -164,6 +191,10 @@ fn print_usage_and_exit() -> ! {
     eprintln!("  smol list                          list tasks");
     eprintln!("  smol cancel <task-id>              cancel a task");
     eprintln!("  smol clean                         clean old tasks");
+    eprintln!("  smol search <query>                full-text search in task logs");
+    eprintln!("  smol export [<task-id>]            export task(s) as JSON or markdown");
+    eprintln!("  smol import <file>                 import a task from JSON");
+    eprintln!("  smol parsers <action>              manage parsers (list, init, sync)");
     eprintln!("  smol setup [<host>]                install smol hooks for AI CLI (opencode, claude)");
     eprintln!("  smol uninstall [<host>]            remove smol hooks for AI CLI");
     eprintln!("  smol completion <shell>            generate shell completion script");

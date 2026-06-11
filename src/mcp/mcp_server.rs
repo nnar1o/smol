@@ -382,6 +382,11 @@ fn make_completed_meta(
         input_tokens: None,
         output_tokens: None,
         compression_ratio: None,
+        test_total: summary.tests.as_ref().map(|t| t.total),
+        test_passed: summary.tests.as_ref().map(|t| t.passed),
+        test_failed: summary.tests.as_ref().map(|t| t.failed),
+        test_errors: summary.tests.as_ref().map(|t| t.errors),
+        test_skipped: summary.tests.as_ref().map(|t| t.skipped),
     }
 }
 

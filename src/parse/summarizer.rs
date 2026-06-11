@@ -51,6 +51,60 @@ pub fn format_summary(summary: &Summary) -> String {
 
     let mut result = parts.join(" ");
 
+    // Append test results if present
+    if let Some(ref tests) = summary.tests {
+        // Build a readable test summary showing only non-zero counts
+        let mut test_parts: Vec<String> = Vec::new();
+        if tests.passed > 0 {
+            test_parts.push(format!("{} passed", tests.passed));
+        }
+        if tests.failed > 0 {
+            test_parts.push(format!("{} failed", tests.failed));
+        }
+        if tests.errors > 0 {
+            test_parts.push(format!("{} errors", tests.errors));
+        }
+        if tests.skipped > 0 {
+            test_parts.push(format!("{} skipped", tests.skipped));
+        }
+        if test_parts.is_empty() && tests.total > 0 {
+            test_parts.push(format!("{} total", tests.total));
+        }
+
+        if !test_parts.is_empty() {
+            result.push_str(&format!(
+                "\ntests: {} of {}",
+                test_parts.join(", "),
+                tests.total
+            ));
+        }
+
+        // Show individual test failures
+        if !tests.failures.is_empty() {
+            for failure in &tests.failures {
+                let test_name = failure.test.as_deref().unwrap_or("");
+                if !test_name.is_empty() {
+                    result.push_str(&format!(
+                        "\n  FAIL {}::{}",
+                        failure.suite,
+                        test_name,
+                    ));
+                } else if !failure.message.is_empty() {
+                    result.push_str(&format!(
+                        "\n  FAIL {}: {}",
+                        failure.suite,
+                        failure.message,
+                    ));
+                } else {
+                    result.push_str(&format!(
+                        "\n  FAIL {}",
+                        failure.suite,
+                    ));
+                }
+            }
+        }
+    }
+
     // Add first few error lines if present
     if !summary.errors.is_empty() {
         result.push('\n');
@@ -102,6 +156,7 @@ mod tests {
             input_tokens: 0,
             output_tokens: 0,
             compression_ratio: 1.0,
+            tests: None,
         }
     }
 

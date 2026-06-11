@@ -91,6 +91,17 @@ fn default_max_errors() -> usize { 3 }
 fn default_max_warnings() -> usize { 5 }
 fn default_true() -> bool { true }
 
+/// A pattern for extracting structured test results from command output.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestPattern {
+    /// Regex with named groups for extracting test counts.
+    /// Supports: total, passed, failures, errors, skipped.
+    pub summary_regex: String,
+    /// Optional regex for extracting individual test failures.
+    /// Supports: suite, test, message.
+    pub failure_regex: Option<String>,
+}
+
 /// Full configuration for a single output parser.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ParserConfig {
@@ -108,6 +119,9 @@ pub struct ParserConfig {
     pub status_patterns: StatusPatterns,
     #[serde(default)]
     pub summary: SummaryConfig,
+    /// Patterns for extracting test results from output.
+    #[serde(default)]
+    pub test_patterns: Vec<TestPattern>,
 }
 
 #[cfg(test)]

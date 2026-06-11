@@ -1,0 +1,30 @@
+name: Update Homebrew Formula
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version'
+        required: true
+
+jobs:
+  update-formula:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update formula
+        run: |
+          VERSION="${{ github.event.release.tag_name || inputs.version }}"
+          bash scripts/update-homebrew.sh "$VERSION"
+
+      - name: Create PR
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "Update Homebrew formula for ${{ github.event.release.tag_name || inputs.version }}"
+          title: "Update Homebrew formula for ${{ github.event.release.tag_name || inputs.version }}"
+          body: "Automated update of Homebrew formula for release ${{ github.event.release.tag_name || inputs.version }}"
+          branch: "update-homebrew-${{ github.event.release.tag_name || inputs.version }}"
+          delete-branch: true

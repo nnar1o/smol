@@ -46,10 +46,38 @@ pub fn execute_command(cmd: CliCommand) -> Result<i32, SmolError> {
         CliCommand::Benchmark => {
             execute_benchmark()
         }
+        CliCommand::Search { query } => {
+            execute_search(query)
+        }
+        CliCommand::Export { task_id, format } => {
+            execute_export(task_id, format)
+        }
+        CliCommand::Import { path } => {
+            execute_import(path)
+        }
+        CliCommand::Parsers { action } => {
+            execute_parsers_action(action)
+        }
         CliCommand::Completion { shell } => {
             execute_completion(shell)
         }
     }
+}
+
+fn execute_search(_query: String) -> Result<i32, SmolError> {
+    Err(SmolError::other("search is not yet implemented"))
+}
+
+fn execute_export(_task_id: Option<String>, _format: Option<String>) -> Result<i32, SmolError> {
+    Err(SmolError::other("export is not yet implemented"))
+}
+
+fn execute_import(_path: String) -> Result<i32, SmolError> {
+    Err(SmolError::other("import is not yet implemented"))
+}
+
+fn execute_parsers_action(_action: String) -> Result<i32, SmolError> {
+    Err(SmolError::other("parsers is not yet implemented"))
 }
 
 fn execute_run(command: Vec<String>, mode: Mode) -> Result<i32, SmolError> {
@@ -164,6 +192,15 @@ fn execute_status(task_id: String) -> Result<i32, SmolError> {
                 0
             };
             println!("Tokens:     {} input → {} output  ({}% reduction)", in_tok, out_tok, reduction);
+        }
+    }
+    if let Some(total) = meta.test_total {
+        if let Some(passed) = meta.test_passed {
+            let failed = meta.test_failed.unwrap_or(0);
+            let errors = meta.test_errors.unwrap_or(0);
+            let skipped = meta.test_skipped.unwrap_or(0);
+            println!("Tests:      {} total, {} passed, {} failed, {} errors, {} skipped",
+                total, passed, failed, errors, skipped);
         }
     }
     Ok(0)
@@ -339,6 +376,13 @@ fn update_completed_task(
     meta.input_tokens = Some(summary.input_tokens);
     meta.output_tokens = Some(summary.output_tokens);
     meta.compression_ratio = Some(summary.compression_ratio);
+    if let Some(ref tests) = summary.tests {
+        meta.test_total = Some(tests.total);
+        meta.test_passed = Some(tests.passed);
+        meta.test_failed = Some(tests.failed);
+        meta.test_errors = Some(tests.errors);
+        meta.test_skipped = Some(tests.skipped);
+    }
     meta.status = match summary.status {
         crate::core::SummaryStatus::Success => {
             meta.exit_code = Some(0);

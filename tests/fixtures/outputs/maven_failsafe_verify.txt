@@ -1,0 +1,52 @@
+[INFO] Scanning for projects...
+[INFO]
+[INFO] --- maven-resources-plugin:3.3.0:resources (default-resources) @ my-app ---
+[INFO] skip non existing resourceDirectory src/main/resources
+[INFO]
+[INFO] --- maven-compiler-plugin:3.11.0:compile (default-compile) @ my-app ---
+[INFO] Compiling 24 source files to /app/target/classes
+[INFO]
+[INFO] --- maven-resources-plugin:3.3.0:testResources (default-testResources) @ my-app ---
+[INFO] skip non existing resourceDirectory src/test/resources
+[INFO]
+[INFO] --- maven-compiler-plugin:3.11.0:testCompile (default-testCompile) @ my-app ---
+[INFO] Compiling 8 source files to /app/target/test-classes
+[INFO]
+[INFO] --- maven-surefire-plugin:3.1.2:test (default-test) @ my-app ---
+[INFO] Running com.example.dao.UserRepositoryTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.123s
+[INFO] Running com.example.service.AuthServiceTest
+[INFO] Tests run: 12, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.456s
+[INFO] Running com.example.controller.ApiControllerTest
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 1, Time elapsed: 0.234s
+[INFO]
+[INFO] Results:
+[INFO]
+[INFO] Tests run: 25, Failures: 0, Errors: 0, Skipped: 1
+[INFO]
+[INFO]
+[INFO] --- maven-failsafe-plugin:3.1.2:integration-test (integration-test) @ my-app ---
+[INFO] Running com.example.it.OrderFlowIT
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.234s
+[INFO] Running com.example.it.PaymentGatewayIT
+[WARNING] Tests run: 7, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 2.345s
+[INFO] Running com.example.it.NotificationServiceIT
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.567s
+[INFO]
+[INFO] Results:
+[INFO]
+[WARNING] Tests run: 14, Failures: 1, Errors: 0, Skipped: 0
+[INFO]
+[INFO] --- maven-failsafe-plugin:3.1.2:verify (verify) @ my-app ---
+[INFO] Stopping containers...
+[INFO]
+
+Failed tests:
+  com.example.it.PaymentGatewayIT > shouldRejectInvalidCard
+    java.lang.AssertionError: expected [400] but found [200]
+      at com.example.it.PaymentGatewayIT.shouldRejectInvalidCard(PaymentGatewayIT.java:42)
+
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  12.45 s

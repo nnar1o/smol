@@ -51,6 +51,13 @@ failure = [
     { regex = "^error: aborting", group = "message" },
 ]
 
+[[test_patterns]]
+# Cargo test summary line
+# e.g. "test result: FAILED. 9 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out"
+summary_regex = "test result:\\s*\\w+\\.\\s*(?P<passed>\\d+) passed;\\s*(?P<failures>\\d+) failed;\\s*(?P<skipped>\\d+) (?:ignored|skipped)"
+# Individual test failures: e.g. "test test_bar ... FAILED"
+failure_regex = "test\\s+(?P<suite>\\S+)\\s+\\.\\.\\.\\s+FAILED"
+
 [summary]
 max_errors = 3
 max_warnings = 5

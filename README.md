@@ -28,6 +28,12 @@ curl -fsSL https://github.com/nnar1o/smol/releases/latest/download/smol-x86_64-p
 Expand-Archive smol.zip -DestinationPath . ; del smol.zip
 ```
 
+### Homebrew
+
+```sh
+brew install nnar1o/tap/smol
+```
+
 ### From source
 
 ```sh
