@@ -7,6 +7,8 @@ pub enum Mode {
     Auto,
     /// Launch immediately in background.
     Background,
+    /// Run synchronously with live progress display (spinner + counters).
+    Interactive,
 }
 
 impl Mode {
@@ -14,6 +16,7 @@ impl Mode {
         match s {
             "sync" => Mode::Sync,
             "background" | "bg" => Mode::Background,
+            "interactive" | "int" => Mode::Interactive,
             _ => Mode::Auto,
         }
     }
@@ -165,6 +168,7 @@ pub fn parse_cli() -> CliCommand {
                     "--sync" => mode = Mode::Sync,
                     "--bg" => mode = Mode::Background,
                     "--auto" => mode = Mode::Auto,
+                    "--interactive" | "--int" => mode = Mode::Interactive,
                     "--mode" => {
                         if let Some(val) = raw_args.get(i + 1) {
                             mode = Mode::from_str(val);
@@ -204,6 +208,7 @@ fn print_usage_and_exit() -> ! {
     eprintln!("  --sync       Wait for command to finish");
     eprintln!("  --auto       Wait a few seconds, then background if slow (default)");
     eprintln!("  --bg         Run in background immediately");
+    eprintln!("  --interactive  Run with live progress display (spinner + counters)");
     #[cfg(debug_assertions)]
     eprintln!();
     #[cfg(debug_assertions)]
@@ -239,6 +244,8 @@ mod tests {
         assert_eq!(Mode::from_str("auto"), Mode::Auto);
         assert_eq!(Mode::from_str("bg"), Mode::Background);
         assert_eq!(Mode::from_str("background"), Mode::Background);
+        assert_eq!(Mode::from_str("interactive"), Mode::Interactive);
+        assert_eq!(Mode::from_str("int"), Mode::Interactive);
         assert_eq!(Mode::from_str("unknown"), Mode::Auto);
     }
 

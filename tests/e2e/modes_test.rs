@@ -115,7 +115,7 @@ fn test_background_task_status() {
         .arg("status").arg("last")
         .output().unwrap();
     let stdout = String::from_utf8_lossy(&status_output.stdout);
-    assert!(stdout.contains("Task:"), "Should show task info: {}", stdout);
+    assert!(stdout.contains("success"), "Should show success status: {}", stdout);
     assert!(stdout.contains("hello-status"), "Should show command: {}", stdout);
 }
 
@@ -148,6 +148,40 @@ fn test_auto_mode_slow_command() {
     let temp = TempDir::new().unwrap();
     smol_cmd(&temp)
         .arg("--auto").arg("echo").arg("still-fast")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("success"));
+}
+
+/// Interactive mode: basic echo command should complete and show success.
+#[test]
+fn test_interactive_mode_completes() {
+    let temp = TempDir::new().unwrap();
+    smol_cmd(&temp)
+        .arg("--interactive").arg("echo").arg("hello-interactive")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("success"));
+}
+
+/// Interactive mode: non-zero exit code propagates.
+#[test]
+fn test_interactive_mode_failure() {
+    let temp = TempDir::new().unwrap();
+    let assert = smol_cmd(&temp)
+        .arg("--interactive").arg("false")
+        .assert();
+    assert
+        .code(1)
+        .stdout(predicate::str::contains("success").or(predicate::str::contains("done")));
+}
+
+/// Interactive mode: short flag --int works.
+#[test]
+fn test_interactive_short_flag() {
+    let temp = TempDir::new().unwrap();
+    smol_cmd(&temp)
+        .arg("--int").arg("echo").arg("short-flag")
         .assert()
         .success()
         .stdout(predicate::str::contains("success"));

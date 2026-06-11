@@ -1,6 +1,6 @@
 [package]
 name = "smol"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2024"
 description = "Smart Minimal Output Logger — run commands and get summarized output for LLMs"
 
@@ -15,6 +15,7 @@ rand = "0.8"
 rusqlite = { version = "0.31", features = ["bundled"] }
 dirs = "5"
 libc = "0.2"
+indicatif = "0.17"
 
 [[bin]]
 name = "smol-mcp"

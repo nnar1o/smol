@@ -3,7 +3,7 @@ pub mod watcher;
 pub mod backgrounder;
 pub mod signal;
 
-use std::io::Read;
+use std::io::{BufRead, BufReader, Read};
 use std::process::{Child, Command, Stdio};
 use std::sync::mpsc;
 use std::thread;
@@ -178,6 +178,131 @@ pub fn run_with_timeout(
     Ok(RunResult {
         stdout: truncate(stdout_buf),
         stderr: truncate(stderr_buf),
+        exit_code,
+        pid: Some(pid),
+        duration_sec: duration,
+    })
+}
+
+/// Run a command with live progress display using indicatif.
+///
+/// Shows a spinner with elapsed time, error/warning counts, and the last
+/// output line. Output is still captured and returned as a normal `RunResult`.
+pub fn run_interactive(
+    cmd: &[String],
+    max_bytes: u64,
+) -> Result<RunResult, SmolError> {
+    use indicatif::{ProgressBar, ProgressStyle};
+
+    let start = std::time::Instant::now();
+    let (mut child, stdout_pipe, stderr_pipe) = spawn_command(cmd)?;
+    let pid = child.id();
+
+    // ── progress display ──────────────────────────────────────────────
+    let pb = ProgressBar::new_spinner();
+    pb.set_style(
+        ProgressStyle::default_spinner()
+            .tick_chars("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏")
+            .template("{spinner:.green} [{elapsed_precise}] {msg}")
+            .unwrap(),
+    );
+    pb.set_message("running…");
+    pb.enable_steady_tick(Duration::from_millis(80));
+
+    // ── streaming output capture ──────────────────────────────────────
+    let (tx, rx) = mpsc::channel::<(&'static str, String)>();
+
+    let tx_out = tx.clone();
+    let tx_err = tx.clone();
+    let out_reader = BufReader::new(stdout_pipe);
+    thread::spawn(move || {
+        for line in out_reader.lines() {
+            if let Ok(l) = line {
+                if tx_out.send(("stdout", l)).is_err() {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+    });
+
+    let err_reader = BufReader::new(stderr_pipe);
+    thread::spawn(move || {
+        for line in err_reader.lines() {
+            if let Ok(l) = line {
+                if tx_err.send(("stderr", l)).is_err() {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+    });
+
+    // Drop the original tx so the channel closes once both reader threads finish
+    drop(tx);
+
+    let mut stdout_buf = String::new();
+    let mut stderr_buf = String::new();
+    let mut error_count: u32 = 0;
+    let mut warning_count: u32 = 0;
+    let max = max_bytes as usize;
+    let mut truncated = false;
+
+    // ── process lines as they arrive ──────────────────────────────────
+    for (stream, line) in rx {
+        // Simple heuristic counting
+        let lower = line.to_lowercase();
+        if lower.contains("error") || lower.contains("failure") {
+            error_count = error_count.saturating_add(1);
+        }
+        if lower.contains("warning") {
+            warning_count = warning_count.saturating_add(1);
+        }
+
+        // Update spinner message with last line (truncated to 80 chars)
+        let display = if line.len() > 78 {
+            format!("{}…", &line[..75])
+        } else {
+            line.clone()
+        };
+        pb.set_message(format!(
+            "err:{}  warn:{}  › {}",
+            error_count, warning_count, display
+        ));
+
+        // Store (with truncation)
+        if !truncated {
+            let target = match stream {
+                "stdout" => &mut stdout_buf,
+                _ => &mut stderr_buf,
+            };
+            let line_bytes = line.len() + 1; // +1 for newline
+            if target.len() + line_bytes > max {
+                let remaining = max.saturating_sub(target.len());
+                if remaining > 0 {
+                    target.push_str(&line[..remaining.min(line.len())]);
+                    target.push('\n');
+                }
+                target.push_str("[truncated]");
+                truncated = true;
+            } else {
+                target.push_str(&line);
+                target.push('\n');
+            }
+        }
+    }
+
+    // ── finalise ──────────────────────────────────────────────────────
+    let exit_code = child.wait().ok().and_then(|s| s.code());
+    let duration = start.elapsed().as_secs();
+
+    pb.finish_and_clear();
+
+    Ok(RunResult {
+        stdout: stdout_buf,
+        stderr: stderr_buf,
         exit_code,
         pid: Some(pid),
         duration_sec: duration,

@@ -132,6 +132,29 @@ fn execute_run(command: Vec<String>, mode: Mode) -> Result<i32, SmolError> {
             println!("{}", formatted);
             Ok(result.exit_code.unwrap_or(1))
         }
+        Mode::Interactive => {
+            if signal::is_cancelled() {
+                return Ok(130);
+            }
+
+            let result = exec::run_interactive(&command, global_config.max_output_bytes)?;
+
+            if signal::is_cancelled() {
+                return Ok(130);
+            }
+            let summary = parse::parse_output(
+                &command.join(" "),
+                &result.stdout,
+                &result.stderr,
+                &parsers,
+                global_config.max_errors,
+                global_config.max_warnings,
+            )?;
+
+            let formatted = parse::summarizer::format_summary(&summary);
+            println!("{}", formatted);
+            Ok(result.exit_code.unwrap_or(1))
+        }
         Mode::Auto => {
             let options = exec::watcher::WatchOptions {
                 max_bytes: global_config.max_output_bytes,
@@ -170,20 +193,21 @@ fn execute_status(task_id: String) -> Result<i32, SmolError> {
 
     let mut meta = storage::load_task_meta(&id, &tasks_dir)?;
     let _ = update_completed_task(&mut meta, &tasks_dir);
-    println!("Task:       {}", meta.id);
-    println!("Command:    {}", meta.command);
-    println!("Status:     {}", meta.status.as_str());
-    println!("Created:    {}", meta.created_at);
-    if let Some(t) = meta.completed_at {
-        println!("Completed:  {}", t);
-    }
+
+    // Line 1: id  status  command
+    print!("{}  {}  {}", meta.id, meta.status.as_str(), meta.command);
     if let Some(d) = meta.duration_sec {
-        println!("Duration:   {}s", d);
+        print!("  [{}s]", d);
     }
+    println!();
+
+    // Line 2: err/warn + optional fields
+    let mut parts: Vec<String> = Vec::new();
+    parts.push(format!("err:{}", meta.error_count));
+    parts.push(format!("warn:{}", meta.warning_count));
     if let Some(code) = meta.exit_code {
-        println!("Exit code:  {}", code);
+        parts.push(format!("exit:{}", code));
     }
-    println!("Errors:     {}   Warnings: {}", meta.error_count, meta.warning_count);
     if let Some(in_tok) = meta.input_tokens {
         if let Some(out_tok) = meta.output_tokens {
             let reduction = if in_tok > 0 {
@@ -191,7 +215,7 @@ fn execute_status(task_id: String) -> Result<i32, SmolError> {
             } else {
                 0
             };
-            println!("Tokens:     {} input → {} output  ({}% reduction)", in_tok, out_tok, reduction);
+            parts.push(format!("tok:{}→{}({}%)", in_tok, out_tok, reduction));
         }
     }
     if let Some(total) = meta.test_total {
@@ -199,10 +223,10 @@ fn execute_status(task_id: String) -> Result<i32, SmolError> {
             let failed = meta.test_failed.unwrap_or(0);
             let errors = meta.test_errors.unwrap_or(0);
             let skipped = meta.test_skipped.unwrap_or(0);
-            println!("Tests:      {} total, {} passed, {} failed, {} errors, {} skipped",
-                total, passed, failed, errors, skipped);
+            parts.push(format!("tests:{}/ {}/ {}/ {}/{}", total, passed, failed, errors, skipped));
         }
     }
+    println!("  {}", parts.join("  "));
     Ok(0)
 }
 

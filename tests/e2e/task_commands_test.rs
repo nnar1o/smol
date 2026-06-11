@@ -55,13 +55,13 @@ fn test_task_lifecycle() {
     // Give time for the task to complete and write output
     std::thread::sleep(Duration::from_millis(300));
 
-    // 2. Check status shows correct fields
+    // 2. Check status shows correct fields (compact format)
     let status_out = smol_output(&temp, &["status", &task_id]);
     assert!(status_out.contains(&task_id), "Status should contain task id");
     assert!(status_out.contains("lifecycle-test-123"), "Status should contain command");
-    assert!(status_out.contains("Status:"), "Status should have Status field");
-    assert!(status_out.contains("Created:"), "Status should have Created field");
-    assert!(status_out.contains("Errors:"), "Status should have Errors field");
+    assert!(status_out.contains("success"), "Status should show success status");
+    assert!(status_out.contains("err:"), "Status should have err field");
+    assert!(status_out.contains("warn:"), "Status should have warn field");
 
     // 3. Check status last works
     let status_last = smol_output(&temp, &["status", "last"]);

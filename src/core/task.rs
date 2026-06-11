@@ -9,6 +9,7 @@ pub enum TaskMode {
     Sync,
     Auto,
     Background,
+    Interactive,
 }
 
 impl TaskMode {
@@ -17,6 +18,7 @@ impl TaskMode {
             TaskMode::Sync => "sync",
             TaskMode::Auto => "auto",
             TaskMode::Background => "background",
+            TaskMode::Interactive => "interactive",
         }
     }
 }
@@ -105,6 +107,7 @@ mod tests {
         assert_eq!(TaskMode::Sync.as_str(), "sync");
         assert_eq!(TaskMode::Auto.as_str(), "auto");
         assert_eq!(TaskMode::Background.as_str(), "background");
+        assert_eq!(TaskMode::Interactive.as_str(), "interactive");
     }
 
     #[test]
