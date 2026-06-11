@@ -1,0 +1,61 @@
+name = "vite"
+description = "Vite frontend build tool output parser"
+
+[detection]
+command_prefix = "vite"
+
+[detection.heuristic]
+regex = "(vite(?:\\s+v?[\\d.]+)?|built in \\d+\\.\\d+s|\\[vite\\])"
+min_lines = 1
+
+ignore_patterns = [
+    "^\\s*$",
+    "^\\s*transforming\\.\\.\\.\\s*$",
+    "^\\s*rendering\\.\\.\\.\\s*$",
+    "^\\s*\\[.*\\]\\s+\\S+\\s+[\\d.]+\\s+KB$",
+    "^\\s*→\\s+\\S+\\s+[\\d.]+\\s+KB",
+    "^\\s*✓\\s+built in",
+]
+
+[[error_patterns]]
+regex = "^\\[vite\\]\\s+(?P<message>.+)$"
+severity = "error"
+is_fatal = true
+
+[[error_patterns]]
+regex = "(?P<file>\\S+\\.(?:ts|tsx|js|jsx|vue|svelte)):(?P<line>\\d+):(?P<column>\\d+):\\s+error:\\s+(?P<message>.+)$"
+severity = "error"
+
+[[error_patterns]]
+regex = "^(?P<message>✗|x)\\s+(?:ERROR|Error|error):\\s+(.+)$"
+severity = "error"
+
+[[error_patterns]]
+regex = "^error\\s+(?P<message>.+)$"
+severity = "error"
+
+[[warning_patterns]]
+regex = "^\\[vite:warning\\]\\s+(?P<message>.+)$"
+severity = "warning"
+
+[[warning_patterns]]
+regex = "(?P<message>chunk\\s+\\S+\\s+is larger than \\d+\\s+KB).*$"
+severity = "warning"
+
+[[warning_patterns]]
+regex = "^\\s*(!)\\s+(?P<message>.+)$"
+severity = "warning"
+
+[status_patterns]
+success = [
+    { regex = "built in", group = "message" },
+]
+failure = [
+    { regex = "error", group = "message" },
+    { regex = "build failed", group = "message" },
+]
+
+[summary]
+max_errors = 3
+max_warnings = 5
+show_error_lines = true

@@ -1,0 +1,64 @@
+name = "systemctl"
+description = "systemd service manager output parser"
+
+[detection]
+command_prefix = "systemctl"
+
+[detection.heuristic]
+regex = "Unit .+ could not be found|Active: active|Active: failed|Active: inactive"
+min_lines = 1
+
+ignore_patterns = [
+    "^\\s*$",
+    "^\\s*Loaded:",
+    "^\\s*Main PID:",
+    "^\\s*Tasks:",
+    "^\\s*Memory:",
+    "^\\s*CPU:",
+    "^\\s*CGroup:",
+]
+
+[[error_patterns]]
+regex = "Unit\\s+(?P<file>.+?)\\s+could not be found\\.?"
+severity = "error"
+is_fatal = true
+
+[[error_patterns]]
+regex = "^Failed to start\\s+(?P<message>.+)$"
+severity = "error"
+is_fatal = true
+
+[[error_patterns]]
+regex = "^Job for\\s+(?P<message>.+) failed"
+severity = "error"
+is_fatal = true
+
+[[error_patterns]]
+regex = "^Dependency failed for\\s+(?P<message>.+)$"
+severity = "error"
+is_fatal = true
+
+[[error_patterns]]
+regex = "^systemctl:\\s+(?P<message>.+)$"
+severity = "error"
+
+[[warning_patterns]]
+regex = "^Warning:\\s+(?P<message>.+)$"
+severity = "warning"
+
+[status_patterns]
+success = [
+    { regex = "active \\(running\\)", group = "message" },
+    { regex = "active \\(exited\\)", group = "message" },
+]
+failure = [
+    { regex = "could not be found", group = "message" },
+    { regex = "Failed to start", group = "message" },
+    { regex = "Job for .+ failed", group = "message" },
+    { regex = "Dependency failed", group = "message" },
+]
+
+[summary]
+max_errors = 3
+max_warnings = 5
+show_error_lines = true

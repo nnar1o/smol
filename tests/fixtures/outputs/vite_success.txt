@@ -1,0 +1,10 @@
+
+  vite v5.4.2 building for production...
+  transforming...
+  ✓ 142 modules transformed.
+  rendering...
+  ✓ built in 2.45s
+
+  dist/index.html                  0.45 kB │ gzip:  0.30 kB
+  dist/assets/index-Bg6kG4Vx.js  142.80 kB │ gzip: 47.92 kB
+  dist/assets/vendor-Dh3kG4Vx.js 215.40 kB │ gzip: 68.30 kB

@@ -1,6 +1,6 @@
 [package]
 name = "smol"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 description = "Smart Minimal Output Logger — run commands and get summarized output for LLMs"
 
@@ -68,6 +68,18 @@ path = "tests/integration/go_parser_test.rs"
 [[test]]
 name = "generic_parser_test"
 path = "tests/integration/generic_parser_test.rs"
+
+[[test]]
+name = "batch_a_parser_test"
+path = "tests/integration/batch_a_parser_test.rs"
+
+[[test]]
+name = "batch_b_parser_test"
+path = "tests/integration/batch_b_parser_test.rs"
+
+[[test]]
+name = "batch_c_parser_test"
+path = "tests/integration/batch_c_parser_test.rs"
 
 [[test]]
 name = "storage_test"

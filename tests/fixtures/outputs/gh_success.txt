@@ -1,0 +1,5 @@
+Showing 2 of 2 open pull requests in owner/repo
+
+NUMBER  TITLE                    BRANCH          STATE
+#42     Fix bug in auth handler  fix-auth        OPEN
+#43     Add logging middleware    feat-logging    OPEN

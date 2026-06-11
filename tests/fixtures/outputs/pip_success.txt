@@ -1,0 +1,17 @@
+Collecting requests
+  Downloading requests-2.31.0-py3-none-any.whl (62 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 62.6/62.6 kB 2.1 MB/s eta 0:00:00
+Collecting charset-normalizer
+  Downloading charset_normalizer-3.3.2-cp312-cp312-macosx_11_0_arm64.whl (128 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 128.5/128.5 kB 3.4 MB/s eta 0:00:00
+Collecting idna
+  Downloading idna-3.6-py3-none-any.whl (61 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 61.9/61.9 kB 2.8 MB/s eta 0:00:00
+Collecting urllib3
+  Downloading urllib3-2.1.0-py3-none-any.whl (104 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 104.6/104.6 kB 3.1 MB/s eta 0:00:00
+Collecting certifi
+  Downloading certifi-2024.2.2-py3-none-any.whl (165 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 165.5/165.5 kB 3.6 MB/s eta 0:00:00
+Installing collected packages: urllib3, idna, certifi, charset-normalizer, requests
+Successfully installed certifi-2024.2.2 charset-normalizer-3.3.2 idna-3.6 requests-2.31.0 urllib3-2.1.0

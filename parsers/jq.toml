@@ -1,0 +1,50 @@
+name = "jq"
+description = "jq JSON processor output parser"
+
+[detection]
+command_prefix = "jq"
+
+[detection.heuristic]
+regex = "jq: (error|parse error)"
+min_lines = 1
+
+ignore_patterns = [
+    "^\\s*$",
+]
+
+[[error_patterns]]
+regex = "^jq:\\s+error:\\s+(?P<message>.+)$"
+severity = "error"
+is_fatal = true
+
+[[error_patterns]]
+regex = "^jq:\\s+parse error:\\s+(?P<message>.+)$"
+severity = "error"
+is_fatal = true
+
+[[error_patterns]]
+regex = "^jq:\\s+error \\(at\\s+(?P<message>.+)\\)$"
+severity = "error"
+is_fatal = true
+
+[[error_patterns]]
+regex = "^(?P<message>Cannot iterate over null)$"
+severity = "error"
+is_fatal = true
+
+[status_patterns]
+success = [
+    { regex = "^\\{", group = "message" },
+    { regex = "^\\[", group = "message" },
+    { regex = "^\"", group = "message" },
+    { regex = "^\\d+(\\.\\d+)?$", group = "message" },
+]
+failure = [
+    { regex = "^jq: error", group = "message" },
+    { regex = "^jq: parse error", group = "message" },
+]
+
+[summary]
+max_errors = 3
+max_warnings = 5
+show_error_lines = true

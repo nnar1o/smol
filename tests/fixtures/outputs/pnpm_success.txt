@@ -1,0 +1,8 @@
+Packages: +15
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 42, reused 38, downloaded 4, added 15, done
+.../node_modules/express postinstall$ node scripts/postinstall.js
+.../node_modules/express postinstall: Done
+. prepare$ husky install
+. prepare: Done
+Done in 3.2s

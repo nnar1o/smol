@@ -1,0 +1,3 @@
+Looking in indexes: https://pypi.org/simple, https://pypi.org/simple
+ERROR: Could not find a version that satisfies the requirement nonexistent-package==999.0.0 (from versions: none)
+ERROR: No matching distribution found for nonexistent-package==999.0.0

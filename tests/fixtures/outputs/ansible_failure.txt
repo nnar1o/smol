@@ -1,0 +1,9 @@
+PLAY [Deploy app] **************************************************************
+
+TASK [Gathering Facts] *********************************************************
+fatal: [web-1]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: ssh: connect to host web-1 port 22: Connection refused", "unreachable": true}
+fatal: [web-2]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: ssh: connect to host web-2 port 22: Connection refused", "unreachable": true}
+
+PLAY RECAP *********************************************************************
+web-1 : ok=0 changed=0 unreachable=1 failed=1 skipped=0 rescued=0 ignored=0
+web-2 : ok=0 changed=0 unreachable=1 failed=1 skipped=0 rescued=0 ignored=0

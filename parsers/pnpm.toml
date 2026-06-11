@@ -1,0 +1,64 @@
+name = "pnpm"
+description = "pnpm package manager output parser"
+
+[detection]
+command_prefix = "pnpm"
+
+[detection.heuristic]
+regex = "^(Packages:\\s+\\+\\d+|Progress:|ERR_PNPM|pnpm)"
+min_lines = 1
+
+ignore_patterns = [
+    "^\\s*$",
+    "^Packages:\\s+\\+\\d+$",
+    "^\\+\\+\\+\\+\\+\\+\\+\\+\\+\\+\\+\\+\\+\\+\\+\\+\\+\\+\\+\\+",
+    "^\\|\\s*\\|\\s*$",
+    "^\\|[-# ]+\\|\\s*$",
+    "^\\.\\.\\.+$",
+    "^Already up to date",
+    "^Lockfile is up to date",
+]
+
+[[error_patterns]]
+regex = "^ERR_PNPM\\s+(?P<message>.+)$"
+severity = "error"
+
+[[error_patterns]]
+regex = "^pnpm: Pnpm cannot find package\\s+(?P<message>.+)$"
+severity = "error"
+is_fatal = true
+
+[[error_patterns]]
+regex = "(?P<message>Conflicting peer dependency):\\s+.+$"
+severity = "error"
+
+[[error_patterns]]
+regex = "(?P<message>Cannot find module .+)$"
+severity = "error"
+
+[[warning_patterns]]
+regex = "^WARN\\s+(?P<message>.+)$"
+severity = "warning"
+
+[[warning_patterns]]
+regex = "(?P<message>deprecated|deprecation).*$"
+severity = "warning"
+
+[[warning_patterns]]
+regex = "Unmet peer dependency\\s+(?P<message>\\S+)"
+severity = "warning"
+
+[status_patterns]
+success = [
+    { regex = "Done", group = "message" },
+    { regex = "Already up to date", group = "message" },
+]
+failure = [
+    { regex = "^ERR_PNPM", group = "message" },
+    { regex = "Conflicting peer dependency", group = "message" },
+]
+
+[summary]
+max_errors = 3
+max_warnings = 5
+show_error_lines = true

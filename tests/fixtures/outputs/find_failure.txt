@@ -1,0 +1,4 @@
+find: /root: Permission denied
+find: /root/.bashrc: Permission denied
+find: /root/.ssh: Permission denied
+find: /root/.config: Permission denied

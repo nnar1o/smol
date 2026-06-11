@@ -1,0 +1,58 @@
+name = "aws"
+description = "AWS CLI output parser"
+
+[detection]
+command_prefix = "aws"
+
+[detection.heuristic]
+regex = "An error occurred|AccessDenied|Unknown options?|usage: aws|profile .+ not found"
+min_lines = 1
+
+ignore_patterns = [
+    "^\\s*$",
+]
+
+[[error_patterns]]
+regex = "^An error occurred \\((?P<message>[^)]+)\\)"
+severity = "error"
+
+[[error_patterns]]
+regex = "^An error occurred .+?:\\s+(?P<message>.+)$"
+severity = "error"
+is_fatal = true
+
+[[error_patterns]]
+regex = "^(?P<message>Unknown option)s?:"
+severity = "error"
+
+[[error_patterns]]
+regex = "^usage: aws\\s+.*$"
+severity = "error"
+
+[[error_patterns]]
+regex = "^(?P<message>.+?): error: .+$"
+severity = "error"
+
+[[warning_patterns]]
+regex = "^warning:\\s+(?P<message>.+)$"
+severity = "warning"
+
+[[warning_patterns]]
+regex = "^(?P<message>.+?)is not (set|configured)"
+severity = "warning"
+
+[status_patterns]
+success = [
+    { regex = "^[0-9]{4}-[0-9]{2}-[0-9]{2}\\s+", group = "message" },
+    { regex = "successfully", group = "message" },
+]
+failure = [
+    { regex = "^An error occurred", group = "message" },
+    { regex = "^usage:", group = "message" },
+    { regex = "Unknown option", group = "message" },
+]
+
+[summary]
+max_errors = 3
+max_warnings = 5
+show_error_lines = true

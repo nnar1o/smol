@@ -1,0 +1,78 @@
+name = "ruby"
+description = "Ruby interpreter, Bundler, and Gem output parser"
+
+[detection]
+command_prefix = "ruby"
+
+[detection.heuristic]
+regex = "(SyntaxError|LoadError|NoMethodError|Gem::|bundler|Bundle complete|Fetching gem)"
+min_lines = 1
+
+ignore_patterns = [
+    "^\\s*$",
+    "^Fetching (gem|source)",
+    "^Resolving dependencies",
+    "^Installing ",
+    "^Using ",
+    "^Bundle complete",
+    "^Your bundle is locked",
+    "^\\s+from ",
+]
+
+[[error_patterns]]
+regex = "(?P<file>.+?):(?P<line>\\d+):\\s+(?P<message>syntax error, unexpected .+)$"
+severity = "error"
+
+[[error_patterns]]
+regex = "(?P<file>.+?):(?P<line>\\d+:\\s+)?(?P<message>SyntaxError):\\s+.+$"
+severity = "error"
+
+[[error_patterns]]
+regex = "(?P<message>Gem::LoadError):\\s+.+$"
+severity = "error"
+
+[[error_patterns]]
+regex = "(?P<message>LoadError):\\s+.+$"
+severity = "error"
+
+[[error_patterns]]
+regex = "(?P<message>NoMethodError):\\s+.+$"
+severity = "error"
+
+[[error_patterns]]
+regex = "(?P<message>Bundler could not find .+)$"
+severity = "error"
+is_fatal = true
+
+[[error_patterns]]
+regex = "^bundler:\\s+(?P<message>.+)$"
+severity = "error"
+
+[[warning_patterns]]
+regex = "^warning:\\s+(?P<message>.+)$"
+severity = "warning"
+
+[[warning_patterns]]
+regex = "^\\[DEPRECATED\\]\\s+(?P<message>.+)$"
+severity = "warning"
+
+[[warning_patterns]]
+regex = "(?P<file>.+?):(?P<line>\\d+):\\s+warning:\\s+(?P<message>.+)$"
+severity = "warning"
+
+[status_patterns]
+success = [
+    { regex = "Syntax OK", group = "message" },
+    { regex = "Bundle complete", group = "message" },
+]
+failure = [
+    { regex = "syntax error", group = "message" },
+    { regex = "SyntaxError", group = "message" },
+    { regex = "LoadError", group = "message" },
+    { regex = "Bundler could not find", group = "message" },
+]
+
+[summary]
+max_errors = 3
+max_warnings = 5
+show_error_lines = true

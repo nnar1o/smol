@@ -1,0 +1,62 @@
+name = "gh"
+description = "GitHub CLI (gh) output parser"
+
+[detection]
+command_prefix = "gh"
+
+[detection.heuristic]
+regex = "Showing \\d+ of \\d+ (open|closed) (pull request|issue)|gh: |GraphQL:|HTTP \\d{3}:"
+min_lines = 1
+
+ignore_patterns = [
+    "^\\s*$",
+    "^\\|\\s*",
+    "^NUMBER\\s+TITLE",
+    "^#\\d+\\s+",
+    "^Showing \\d+ of \\d+",
+]
+
+[[error_patterns]]
+regex = "^HTTP \\d{3}:\\s+(?P<message>.+)$"
+severity = "error"
+
+[[error_patterns]]
+regex = "^GraphQL:\\s+(?P<message>.+)$"
+severity = "error"
+is_fatal = true
+
+[[error_patterns]]
+regex = "^gh:\\s+(?P<message>.+)$"
+severity = "error"
+
+[[error_patterns]]
+regex = "^(?P<message>.+?)already exists"
+severity = "error"
+
+[[error_patterns]]
+regex = "^Authentication failed\\.\\s*(?P<message>.*)$"
+severity = "error"
+is_fatal = true
+
+[[warning_patterns]]
+regex = "^warning:\\s+(?P<message>.+)$"
+severity = "warning"
+
+[[warning_patterns]]
+regex = "^(?P<message>.+?)\\s+is not a (gh |GitHub )?command"
+severity = "warning"
+
+[status_patterns]
+success = [
+    { regex = "Showing \\d+ of \\d+", group = "message" },
+    { regex = "Pull request #\\d+", group = "message" },
+]
+failure = [
+    { regex = "^HTTP \\d{3}:", group = "message" },
+    { regex = "^GraphQL:", group = "message" },
+]
+
+[summary]
+max_errors = 3
+max_warnings = 5
+show_error_lines = true

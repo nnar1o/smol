@@ -1,0 +1,12 @@
+
+  vite v5.4.2 building for production...
+  transforming...
+  ✓ 42 modules transformed.
+  rendering...
+  ✗ ERROR: Build failed in 1.23s
+
+  src/components/App.tsx:23:12: error: Type 'string' is not assignable to type 'number'
+    23 |   const count: number = "hello";
+       |              ^^^^^^^^^^^^^^^^^^^
+  error: Build failed with 1 error:
+  src/components/App.tsx:23:12: error: Type 'string' is not assignable to type 'number'

@@ -1,0 +1,6 @@
+WARNING: The SOME_VAR variable is not set. Defaulting to a blank string.
+Creating myapp-web-1    ... error
+Creating myapp-db-1     ... done
+
+ERROR: for myapp-web-1  Cannot start service web: driver failed programming external connectivity on endpoint myapp-web-1 (a8b3c2d1e5f6)
+Error response from daemon: driver failed programming external connectivity on endpoint myapp-web-1

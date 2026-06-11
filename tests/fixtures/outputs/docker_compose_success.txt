@@ -1,0 +1,5 @@
+Creating network "myapp_default" with the default driver
+Creating volume "myapp_data" with default driver
+Creating myapp-web-1    ... done
+Creating myapp-db-1     ... done
+Creating myapp-redis-1  ... done

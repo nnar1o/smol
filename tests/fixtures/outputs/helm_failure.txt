@@ -1,0 +1,3 @@
+Error: failed to download "https://charts.example.com/mychart-1.0.0.tgz" (hint: repo may be missing, try `helm repo add`)
+
+Use "helm list" to see the list of deployed releases

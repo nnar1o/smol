@@ -1,0 +1,53 @@
+name = "helm"
+description = "Helm (Kubernetes package manager) output parser"
+
+[detection]
+command_prefix = "helm"
+
+[detection.heuristic]
+regex = "STATUS: deployed|Release \\\".+\\\" does not exist|helm repo|Chart.yaml|Error: failed"
+min_lines = 1
+
+ignore_patterns = [
+    "^\\s*$",
+    "LAST DEPLOYED:",
+    "REVISION:",
+    "TEST SUITE:",
+]
+
+[[error_patterns]]
+regex = "^Error:\\s+(?P<message>.+)$"
+severity = "error"
+is_fatal = true
+
+[[error_patterns]]
+regex = "^Error: failed to (?P<message>.+)$"
+severity = "error"
+is_fatal = true
+
+[[error_patterns]]
+regex = "^Error: (could not find|plugin|chart) (?P<message>.+)$"
+severity = "error"
+is_fatal = true
+
+[[error_patterns]]
+regex = "^Error: release .+ failed: (?P<message>.+)$"
+severity = "error"
+
+[[warning_patterns]]
+regex = "^WARNING:\\s+(?P<message>.+)$"
+severity = "warning"
+
+[status_patterns]
+success = [
+    { regex = "STATUS: deployed", group = "message" },
+    { regex = "deployed", group = "message" },
+]
+failure = [
+    { regex = "^Error:", group = "message" },
+]
+
+[summary]
+max_errors = 3
+max_warnings = 5
+show_error_lines = true

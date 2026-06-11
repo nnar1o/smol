@@ -1,0 +1,13 @@
+PLAY [Deploy app] **************************************************************
+
+TASK [Gathering Facts] *********************************************************
+ok: [web-1]
+ok: [web-2]
+
+TASK [Install packages] ********************************************************
+changed: [web-1]
+changed: [web-2]
+
+PLAY RECAP *********************************************************************
+web-1 : ok=3 changed=1 unreachable=0 failed=0 skipped=0 rescued=0 ignored=0
+web-2 : ok=3 changed=1 unreachable=0 failed=0 skipped=0 rescued=0 ignored=0

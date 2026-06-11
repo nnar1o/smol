@@ -1,0 +1,65 @@
+name = "pip"
+description = "Python pip package installer output parser"
+
+[detection]
+command_prefix = "pip"
+
+[detection.heuristic]
+regex = "^ERROR: (Could not find|Could not install|No matching distribution)"
+min_lines = 1
+
+ignore_patterns = [
+    "^\\s*$",
+    "^Collecting .+$",
+    "^  Downloading .+$",
+    "^\\s+\\|.+\\|\\s+[\\d.]+/\\d+",
+    "^\\s+[─╰╭╮│├].*$",
+    "^Requirement already satisfied",
+    "^Installing collected packages",
+    "^Successfully installed",
+    "^  Using cached .+$",
+    "^  Preparing metadata",
+    "^  Running command",
+]
+
+[[error_patterns]]
+regex = "^ERROR:\\s+(?P<message>.+)$"
+severity = "error"
+
+[[error_patterns]]
+regex = "^pip:\\s+(?P<message>.+)$"
+severity = "error"
+is_fatal = true
+
+[[error_patterns]]
+regex = "^ERROR: Could not find a version that satisfies the requirement\\s+(?P<message>\\S+)\\s*$"
+severity = "error"
+
+[[error_patterns]]
+regex = "^ERROR: No matching distribution found for\\s+(?P<message>\\S+)\\s*$"
+severity = "error"
+
+[[warning_patterns]]
+regex = "^WARNING:\\s+(?P<message>.+)$"
+severity = "warning"
+
+[[warning_patterns]]
+regex = "^\\[notice\\]\\s+A new release of pip is available:\\s+.+$"
+severity = "warning"
+
+[[warning_patterns]]
+regex = "^DEPRECATION:\\s+(?P<message>.+)$"
+severity = "warning"
+
+[status_patterns]
+success = [
+    { regex = "Successfully installed", group = "message" },
+]
+failure = [
+    { regex = "^ERROR:", group = "message" },
+]
+
+[summary]
+max_errors = 3
+max_warnings = 5
+show_error_lines = true

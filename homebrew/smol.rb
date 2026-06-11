@@ -7,7 +7,7 @@ class Smol < Formula
   url "https://github.com/nnar1o/smol/archive/refs/tags/v0.1.0.tar.gz"
   sha256 "CHANGE_ME"  # Will be set after the next release tag
   license "MIT"
-  version "0.2.0"
+  version "0.3.0"
 
   depends_on "rust" => :build
 

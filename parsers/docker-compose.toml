@@ -1,0 +1,53 @@
+name = "docker-compose"
+description = "Docker Compose output parser"
+
+[detection]
+command_prefix = "docker-compose"
+
+[detection.heuristic]
+regex = "Creating (network|volume|container)|Starting |Started |^\\w+-\\w+-\\d+\\s+.*(done|error| Started)|WARNING: The .+ variable is not set|Error response from daemon"
+min_lines = 1
+
+ignore_patterns = [
+    "^\\s*$",
+    "Creating network",
+    "Creating volume",
+]
+
+[[error_patterns]]
+regex = "^ERROR:\\s+for .+\\s+(?P<message>.+)$"
+severity = "error"
+
+[[error_patterns]]
+regex = "^Error response from daemon:\\s+(?P<message>.+)$"
+severity = "error"
+is_fatal = true
+
+[[error_patterns]]
+regex = "service .+ failed to build: (?P<message>.+)$"
+severity = "error"
+is_fatal = true
+
+[[error_patterns]]
+regex = "^(?P<message>.+?)\\s+... error$"
+severity = "error"
+
+[[warning_patterns]]
+regex = "^WARNING:\\s+(?P<message>.+)$"
+severity = "warning"
+
+[status_patterns]
+success = [
+    { regex = "... done", group = "message" },
+    { regex = "Started", group = "message" },
+]
+failure = [
+    { regex = "... error", group = "message" },
+    { regex = "^ERROR:", group = "message" },
+    { regex = "^Error response from daemon", group = "message" },
+]
+
+[summary]
+max_errors = 3
+max_warnings = 5
+show_error_lines = true

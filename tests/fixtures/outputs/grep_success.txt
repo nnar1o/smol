@@ -1,0 +1,5 @@
+src/main.rs:42:fn process_data(data: &[u8]) -> Result<()> {
+src/lib.rs:15:pub fn helper_function() -> String {
+src/utils.rs:8:pub fn calculate_index(x: usize) -> usize {
+src/cli.rs:23:fn parse_args() -> Args {
+src/models.rs:31:pub fn validate_input(input: &str) -> bool {

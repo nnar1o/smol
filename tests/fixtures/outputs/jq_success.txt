@@ -1,0 +1,6 @@
+{
+  "key": "val",
+  "name": "test",
+  "count": 42,
+  "tags": ["a", "b", "c"]
+}

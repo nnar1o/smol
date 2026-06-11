@@ -25,6 +25,21 @@ const BUILT_IN_PARSERS: &[(&str, &str)] = &[
     ("eslint", include_str!("../../parsers/eslint.toml")),
     ("node", include_str!("../../parsers/node.toml")),
     ("curl", include_str!("../../parsers/curl.toml")),
+    ("cmake", include_str!("../../parsers/cmake.toml")),
+    ("pip", include_str!("../../parsers/pip.toml")),
+    ("pnpm", include_str!("../../parsers/pnpm.toml")),
+    ("vite", include_str!("../../parsers/vite.toml")),
+    ("ruby", include_str!("../../parsers/ruby.toml")),
+    ("gh", include_str!("../../parsers/gh.toml")),
+    ("aws", include_str!("../../parsers/aws.toml")),
+    ("helm", include_str!("../../parsers/helm.toml")),
+    ("ansible", include_str!("../../parsers/ansible.toml")),
+    ("docker-compose", include_str!("../../parsers/docker-compose.toml")),
+    ("grep", include_str!("../../parsers/grep.toml")),
+    ("find", include_str!("../../parsers/find.toml")),
+    ("psql", include_str!("../../parsers/psql.toml")),
+    ("jq", include_str!("../../parsers/jq.toml")),
+    ("systemctl", include_str!("../../parsers/systemctl.toml")),
 ];
 
 /// Load all parsers: built-in first, then override from filesystem parsers_dir.
@@ -110,6 +125,7 @@ mod tests {
         // Use temp dir for parsers (empty = only built-in)
         let dir = std::env::temp_dir();
         let parsers = load_all_parsers(dir.to_str().unwrap()).unwrap();
+        // Originals
         assert!(parsers.contains_key("generic"), "generic parser must exist");
         assert!(parsers.contains_key("maven"), "maven parser must exist");
         assert!(parsers.contains_key("cargo"), "cargo parser must exist");
@@ -119,6 +135,26 @@ mod tests {
         assert!(parsers.contains_key("go"), "go parser must exist");
         assert!(parsers.contains_key("python"), "python parser must exist");
         assert!(parsers.contains_key("make"), "make parser must exist");
+        // New batch A
+        assert!(parsers.contains_key("cmake"), "cmake parser must exist");
+        assert!(parsers.contains_key("pip"), "pip parser must exist");
+        assert!(parsers.contains_key("pnpm"), "pnpm parser must exist");
+        assert!(parsers.contains_key("vite"), "vite parser must exist");
+        assert!(parsers.contains_key("ruby"), "ruby parser must exist");
+        // New batch B
+        assert!(parsers.contains_key("gh"), "gh parser must exist");
+        assert!(parsers.contains_key("aws"), "aws parser must exist");
+        assert!(parsers.contains_key("helm"), "helm parser must exist");
+        assert!(parsers.contains_key("ansible"), "ansible parser must exist");
+        assert!(parsers.contains_key("docker-compose"), "docker-compose parser must exist");
+        // New batch C
+        assert!(parsers.contains_key("grep"), "grep parser must exist");
+        assert!(parsers.contains_key("find"), "find parser must exist");
+        assert!(parsers.contains_key("psql"), "psql parser must exist");
+        assert!(parsers.contains_key("jq"), "jq parser must exist");
+        assert!(parsers.contains_key("systemctl"), "systemctl parser must exist");
+        // Total count
+        assert_eq!(parsers.len(), 35, "total built-in parsers should be 35");
     }
 
     #[test]

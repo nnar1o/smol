@@ -1,0 +1,39 @@
+name = "find"
+description = "find file search output parser"
+
+[detection]
+command_prefix = "find"
+
+ignore_patterns = [
+    "^\\s*$",
+]
+
+[[error_patterns]]
+regex = "^find:\\s+(?P<file>.+?):\\s+(?P<message>Permission denied)$"
+severity = "error"
+
+[[error_patterns]]
+regex = "^find:\\s+(?P<file>.+?):\\s+(?P<message>No such file or directory)$"
+severity = "error"
+
+[[error_patterns]]
+regex = "^find:\\s+(?P<message>File system loop detected.*)$"
+severity = "error"
+
+[[error_patterns]]
+regex = "^find:\\s+(?P<message>.+)$"
+severity = "error"
+
+[status_patterns]
+success = [
+    { regex = "^$", group = "message" },
+]
+failure = [
+    { regex = "Permission denied", group = "message" },
+    { regex = "No such file or directory", group = "message" },
+]
+
+[summary]
+max_errors = 3
+max_warnings = 5
+show_error_lines = true

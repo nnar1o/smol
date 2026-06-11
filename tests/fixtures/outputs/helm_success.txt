@@ -1,0 +1,7 @@
+Release "my-release" does not exist. Installing it now.
+NAME: my-release
+LAST DEPLOYED: Thu Jun 11 10:00:00 2026
+NAMESPACE: default
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
