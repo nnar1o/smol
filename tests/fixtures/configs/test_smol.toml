@@ -1,0 +1,7 @@
+# Test global configuration for smol
+tasks_dir = "/tmp/smol-test/tasks"
+parsers_dir = "/tmp/smol-test/parsers"
+max_output_bytes = 5242880
+auto_wait_secs = 3
+max_errors = 5
+max_warnings = 10

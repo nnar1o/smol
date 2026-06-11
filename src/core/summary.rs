@@ -117,4 +117,47 @@ mod tests {
         assert_eq!(SummaryStatus::Success, SummaryStatus::Success);
         assert_ne!(SummaryStatus::Success, SummaryStatus::Failure);
     }
+
+    #[test]
+    fn test_summary_status_as_str() {
+        assert_eq!(SummaryStatus::Success.as_str(), "success");
+        assert_eq!(SummaryStatus::Failure.as_str(), "failure");
+        assert_eq!(SummaryStatus::Unknown.as_str(), "done");
+    }
+
+    #[test]
+    fn test_estimate_tokens_empty() {
+        assert_eq!(Summary::estimate_tokens(""), 0);
+    }
+
+    #[test]
+    fn test_estimate_tokens_short() {
+        // (3 + 2) / 4 = 1
+        assert_eq!(Summary::estimate_tokens("abc"), 1);
+    }
+
+    #[test]
+    fn test_estimate_tokens_exact() {
+        // (4 + 2) / 4 = 1
+        assert_eq!(Summary::estimate_tokens("abcd"), 1);
+        // (8 + 2) / 4 = 2
+        assert_eq!(Summary::estimate_tokens("abcdefgh"), 2);
+    }
+
+    #[test]
+    fn test_summary_new_has_token_defaults() {
+        let s = Summary::new();
+        assert_eq!(s.input_tokens, 0);
+        assert_eq!(s.output_tokens, 0);
+        assert!((s.compression_ratio - 1.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_compression_ratio_calculation() {
+        let mut s = Summary::new();
+        s.input_tokens = 100;
+        s.output_tokens = 25;
+        s.compression_ratio = 25.0 / 100.0;
+        assert!((s.compression_ratio - 0.25).abs() < f64::EPSILON);
+    }
 }

@@ -4,6 +4,7 @@ use crate::config;
 use crate::storage;
 use crate::parse;
 use crate::exec;
+use crate::exec::signal;
 #[cfg(debug_assertions)]
 use crate::mock;
 
@@ -28,14 +29,36 @@ pub fn execute_command(cmd: CliCommand) -> Result<i32, SmolError> {
         CliCommand::Clean { older } => {
             execute_clean(older)
         }
+        CliCommand::Setup { host } => {
+            execute_setup(host)
+        }
+        CliCommand::Uninstall { host } => {
+            execute_uninstall(host)
+        }
+        CliCommand::Migrate { db_path } => {
+            execute_migrate(db_path)
+        }
         #[cfg(debug_assertions)]
         CliCommand::Mock { name, delay, error_count, warning_count, file, stream } => {
             execute_mock(name, delay, error_count, warning_count, file, stream)
+        }
+        #[cfg(debug_assertions)]
+        CliCommand::Benchmark => {
+            execute_benchmark()
+        }
+        CliCommand::Completion { shell } => {
+            execute_completion(shell)
         }
     }
 }
 
 fn execute_run(command: Vec<String>, mode: Mode) -> Result<i32, SmolError> {
+    // Initialize signal handlers so we can respond to SIGINT/SIGTERM.
+    // In background mode, signal handlers are still registered but the
+    // spawned child runs in its own session (via setsid) and won't be
+    // affected by terminal-originated signals.
+    signal::init();
+
     let global_config = config::load_global_config()?;
     let tasks_dir = if global_config.tasks_dir.is_empty() {
         storage::paths::tasks_dir()
@@ -56,7 +79,18 @@ fn execute_run(command: Vec<String>, mode: Mode) -> Result<i32, SmolError> {
 
     match mode {
         Mode::Sync => {
+            // Check for cancellation before starting
+            if signal::is_cancelled() {
+                return Ok(130); // 128 + SIGINT(2)
+            }
+
             let result = exec::run_sync(&command, global_config.max_output_bytes)?;
+
+            // If a cancellation signal was received during execution,
+            // return a non-zero exit code (128 + SIGINT).
+            if signal::is_cancelled() {
+                return Ok(130);
+            }
             let summary = parse::parse_output(
                 &command.join(" "),
                 &result.stdout,
@@ -122,6 +156,16 @@ fn execute_status(task_id: String) -> Result<i32, SmolError> {
         println!("Exit code:  {}", code);
     }
     println!("Errors:     {}   Warnings: {}", meta.error_count, meta.warning_count);
+    if let Some(in_tok) = meta.input_tokens {
+        if let Some(out_tok) = meta.output_tokens {
+            let reduction = if in_tok > 0 {
+                ((1.0 - out_tok as f64 / in_tok as f64) * 100.0).round() as i64
+            } else {
+                0
+            };
+            println!("Tokens:     {} input → {} output  ({}% reduction)", in_tok, out_tok, reduction);
+        }
+    }
     Ok(0)
 }
 
@@ -292,6 +336,9 @@ fn update_completed_task(
     }
     meta.error_count = summary.error_count;
     meta.warning_count = summary.warning_count;
+    meta.input_tokens = Some(summary.input_tokens);
+    meta.output_tokens = Some(summary.output_tokens);
+    meta.compression_ratio = Some(summary.compression_ratio);
     meta.status = match summary.status {
         crate::core::SummaryStatus::Success => {
             meta.exit_code = Some(0);
@@ -368,6 +415,99 @@ fn execute_mock(
     stream: Option<String>,
 ) -> Result<i32, SmolError> {
     mock::run_mock_command(&name, delay, error_count, warning_count, file.as_deref(), stream.as_deref())
+}
+
+#[cfg(debug_assertions)]
+fn execute_benchmark() -> Result<i32, SmolError> {
+    let results = crate::bench::run_benchmark()?;
+    println!("{:<30} {:>12} {:>12} {:>14} {:>12}", "Scenario", "Input Tokens", "Output Tokens", "Reduction %", "Latency ms");
+    println!("{}", "-".repeat(84));
+    for r in &results {
+        println!("{:<30} {:>12} {:>12} {:>13.1}% {:>12}",
+            r.scenario,
+            r.input_tokens,
+            r.output_tokens,
+            r.reduction_pct,
+            r.latency_ms,
+        );
+    }
+    Ok(0)
+}
+
+fn execute_setup(host: Option<String>) -> Result<i32, SmolError> {
+    let host_str = host.as_deref().unwrap_or("all");
+    if host_str == "all" || host_str == "opencode" {
+        match crate::hook::HookManager::setup("opencode") {
+            Ok(msg) => println!("{}", msg),
+            Err(e) => eprintln!("Warning: opencode setup failed: {}", e),
+        }
+    }
+    if host_str == "all" || host_str == "claude" {
+        match crate::hook::HookManager::setup("claude") {
+            Ok(msg) => println!("{}", msg),
+            Err(e) => eprintln!("Warning: claude setup failed: {}", e),
+        }
+    }
+    if host_str != "all" && host_str != "opencode" && host_str != "claude" {
+        eprintln!("Unknown host: {}. Supported: opencode, claude", host_str);
+        return Ok(1);
+    }
+    Ok(0)
+}
+
+fn execute_uninstall(host: Option<String>) -> Result<i32, SmolError> {
+    match crate::hook::HookManager::uninstall(host.as_deref()) {
+        Ok(msg) => println!("{}", msg),
+        Err(e) => eprintln!("Warning: uninstall failed: {}", e),
+    }
+    Ok(0)
+}
+
+fn execute_completion(shell: String) -> Result<i32, SmolError> {
+    match shell.as_str() {
+        "bash" => print!("{}", crate::completions::generate_bash()),
+        "zsh" => print!("{}", crate::completions::generate_zsh()),
+        "fish" => print!("{}", crate::completions::generate_fish()),
+        _ => {
+            eprintln!("Unknown shell: {}. Supported: bash, zsh, fish", shell);
+            return Ok(1);
+        }
+    }
+    Ok(0)
+}
+
+/// Migrate tasks from TOML file storage to SQLite.
+fn execute_migrate(db_path: Option<String>) -> Result<i32, SmolError> {
+    let tasks_dir = storage::paths::tasks_dir();
+    storage::init(&tasks_dir)?;
+
+    let db_path = db_path.unwrap_or_else(|| {
+        format!("{}/smol.db", storage::paths::smol_dir())
+    });
+
+    // Ensure parent directory exists
+    if let Some(parent) = std::path::Path::new(&db_path).parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+
+    let sqlite = storage::sqlite::SqliteStorage::new(&db_path)?;
+    sqlite.init()?;
+
+    // List all tasks from TOML storage
+    let tasks = storage::list_tasks(&tasks_dir, None)?;
+    if tasks.is_empty() {
+        println!("No tasks found to migrate.");
+        return Ok(0);
+    }
+
+    let mut migrated = 0u64;
+    for meta in &tasks {
+        sqlite.save_task(meta)?;
+        migrated += 1;
+    }
+
+    println!("Migrated {} task(s) to SQLite database at: {}", migrated, db_path);
+    Ok(0)
 }
 
 /// Parse a duration string like "24h", "7d", "3600" into seconds.

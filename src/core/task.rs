@@ -65,6 +65,12 @@ pub struct TaskMeta {
     pub warning_count: u32,
     pub pid: Option<u32>,
     pub background_pid: Option<u32>,
+    /// Estimated input tokens at parse time.
+    pub input_tokens: Option<usize>,
+    /// Estimated output tokens in the summary.
+    pub output_tokens: Option<usize>,
+    /// Compression ratio (output/input) if input > 0.
+    pub compression_ratio: Option<f64>,
 }
 
 /// A runtime task handle (includes the actual process if still running).

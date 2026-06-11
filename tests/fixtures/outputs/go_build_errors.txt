@@ -1,0 +1,8 @@
+# github.com/user/project
+src/main.go:10:2: undefined: x
+src/main.go:11:9: undefined: y
+# github.com/user/project/pkg
+src/pkg/util.go:5:2: undefined: Helper
+cannot find package "example.com/pkg" in any of:
+	/usr/local/go/src/example.com/pkg (from $GOROOT)
+	/home/user/go/src/example.com/pkg (from $GOPATH)

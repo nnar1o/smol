@@ -1,6 +1,7 @@
 pub mod spawner;
 pub mod watcher;
 pub mod backgrounder;
+pub mod signal;
 
 use std::io::Read;
 use std::process::{Child, Command, Stdio};

@@ -1,0 +1,4 @@
+test.c:10:5: error: expected ';' before 'return'
+test.c:11:5: error: expected ';' before 'return'
+test.c:15:3: warning: implicit declaration of function 'foo'
+test.c:12:5: error: expected ';' before 'token'

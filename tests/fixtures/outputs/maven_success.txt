@@ -1,0 +1,15 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] --- maven-compiler-plugin:3.8.1:compile (default-compile) @ my-app ---
+[INFO] Compiling 15 source files to /target/classes
+[INFO] 
+[INFO] --- maven-jar-plugin:3.1.0:jar (default-jar) @ my-app ---
+[INFO] Building jar: /target/my-app-1.0.jar
+[INFO] 
+[INFO] --- maven-install-plugin:2.5.2:install (default-install) @ my-app ---
+[INFO] Installing /target/my-app-1.0.jar to /home/user/.m2/repository
+[INFO] 
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  2.456 s
+[INFO] ------------------------------------------------------------------------

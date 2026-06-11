@@ -12,6 +12,13 @@ regex = "1"
 chrono = { version = "0.4", features = ["serde"] }
 thiserror = "2"
 rand = "0.8"
+rusqlite = { version = "0.31", features = ["bundled"] }
+dirs = "5"
+libc = "0.2"
+
+[[bin]]
+name = "smol-mcp"
+path = "src/bin/smol-mcp.rs"
 
 [dev-dependencies]
 assert_cmd = "2"

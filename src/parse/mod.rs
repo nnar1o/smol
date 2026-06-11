@@ -35,5 +35,20 @@ pub fn parse_output(
     // Apply max_errors/max_warnings trimming for display
     summary = summarizer::trim_summary(summary, max_errors, max_warnings);
 
+    // Calculate token estimates
+    summary.input_tokens = Summary::estimate_tokens(&combined);
+    let summary_text = format!(
+        "{} errors:{} warnings:{}",
+        summary.status.as_str(),
+        summary.error_count,
+        summary.warning_count,
+    );
+    summary.output_tokens = Summary::estimate_tokens(&summary_text);
+    summary.compression_ratio = if summary.input_tokens > 0 {
+        summary.output_tokens as f64 / summary.input_tokens as f64
+    } else {
+        1.0
+    };
+
     Ok(summary)
 }

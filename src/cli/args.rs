@@ -43,6 +43,12 @@ pub enum CliCommand {
         file: Option<String>,
         stream: Option<String>,
     },
+    Migrate { db_path: Option<String> },
+    Setup { host: Option<String> },
+    Uninstall { host: Option<String> },
+    Completion { shell: String },
+    #[cfg(debug_assertions)]
+    Benchmark,
 }
 
 /// Parse CLI arguments. Returns a CliCommand.
@@ -101,6 +107,26 @@ pub fn parse_cli() -> CliCommand {
                 stream: get_opt_value(&raw_args, "--stream", ""),
             }
         }
+        "migrate" => {
+            let db_path = get_opt_value(&raw_args, "--db", "");
+            CliCommand::Migrate { db_path }
+        }
+        #[cfg(debug_assertions)]
+        "benchmark" => {
+            CliCommand::Benchmark
+        }
+        "setup" => {
+            let host = raw_args.get(1).cloned();
+            CliCommand::Setup { host }
+        }
+        "uninstall" => {
+            let host = raw_args.get(1).cloned();
+            CliCommand::Uninstall { host }
+        }
+        "completion" => {
+            let shell = raw_args.get(1).cloned().unwrap_or_else(|| "bash".to_string());
+            CliCommand::Completion { shell }
+        }
         _ => {
             // Direct command: detect mode flags, rest is the command
             let mut mode = Mode::Auto;
@@ -138,6 +164,10 @@ fn print_usage_and_exit() -> ! {
     eprintln!("  smol list                          list tasks");
     eprintln!("  smol cancel <task-id>              cancel a task");
     eprintln!("  smol clean                         clean old tasks");
+    eprintln!("  smol setup [<host>]                install smol hooks for AI CLI (opencode, claude)");
+    eprintln!("  smol uninstall [<host>]            remove smol hooks for AI CLI");
+    eprintln!("  smol completion <shell>            generate shell completion script");
+    eprintln!("  smol migrate [--db <path>]          migrate TOML tasks to SQLite");
     eprintln!();
     eprintln!("Modes:");
     eprintln!("  --sync       Wait for command to finish");
@@ -147,6 +177,8 @@ fn print_usage_and_exit() -> ! {
     eprintln!();
     #[cfg(debug_assertions)]
     eprintln!("  smol mock-command --name <name>    [test] mock command");
+    #[cfg(debug_assertions)]
+    eprintln!("  smol benchmark                    [test] run token benchmarks");
     std::process::exit(1);
 }
 

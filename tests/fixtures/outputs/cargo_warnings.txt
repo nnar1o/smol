@@ -1,0 +1,18 @@
+   Compiling my-app v0.1.0 (/home/user/my-app)
+warning: unused variable `x`
+  --> src/main.rs:15:5
+   |
+15 |     let x = 42;
+   |         ^ help: if you intended to use `x`, consider using a variable name that starts with an underscore: `_x`
+   |
+   = note: `#[warn(unused_variables)]` on by default
+
+warning: unused import `std::collections::HashMap`
+ --> src/lib.rs:1:5
+  |
+1 | use std::collections::HashMap;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.33s

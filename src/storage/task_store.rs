@@ -151,6 +151,9 @@ mod tests {
             warning_count: 0,
             pid: None,
             background_pid: None,
+            input_tokens: None,
+            output_tokens: None,
+            compression_ratio: None,
         }
     }
 

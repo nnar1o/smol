@@ -1,0 +1,4 @@
+   Compiling my-app v0.1.0 (/home/user/my-app)
+   Compiling libc v0.2.150
+   Compiling serde v1.0.196
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.42s

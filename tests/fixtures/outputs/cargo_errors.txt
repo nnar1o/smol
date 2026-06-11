@@ -1,0 +1,17 @@
+   Compiling my-app v0.1.0 (/home/user/my-app)
+error[E0425]: cannot find value `foo` in this scope
+  --> src/main.rs:10:9
+   |
+10 |     let x = foo;
+   |         ^^^ not found in this scope
+
+error[E0425]: cannot find value `bar` in this scope
+  --> src/main.rs:20:9
+   |
+20 |     let y = bar;
+   |         ^^^ not found in this scope
+
+warning: unused variable `x`
+  --> src/main.rs:15:5
+
+error: could not compile `my-app` due to previous error

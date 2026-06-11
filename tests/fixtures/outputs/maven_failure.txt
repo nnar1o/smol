@@ -1,0 +1,16 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] --- maven-compiler-plugin:3.8.1:compile (default-compile) @ my-app ---
+[INFO] Compiling 15 source files to /target/classes
+[ERROR] /src/main/java/App.java:42: error: cannot find symbol
+[ERROR] /src/main/java/App.java:43: error: cannot find symbol
+[ERROR] /src/main/java/App.java:44: error: cannot find symbol
+[WARNING] /src/main/java/App.java:10: unchecked cast
+[WARNING] /src/main/java/App.java:11: unchecked cast
+[WARNING] /src/main/java/App.java:12: unchecked cast
+[WARNING] /src/main/java/App.java:13: unchecked cast
+[WARNING] /src/main/java/App.java:14: unchecked cast
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------

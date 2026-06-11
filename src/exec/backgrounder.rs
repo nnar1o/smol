@@ -1,4 +1,4 @@
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::fs::{self, File};
 use std::path::Path;
 
@@ -6,6 +6,11 @@ use crate::core::{SmolError, TaskId, TaskMeta, TaskStatus, TaskMode};
 
 /// Launch a command in the background.
 /// Returns the task ID and spawned process info.
+///
+/// The child process is fully detached from the parent:
+/// - stdio is redirected to files
+/// - on Unix, `setsid()` creates a new session (no terminal, separate process group)
+/// - stdin is connected to `/dev/null`
 pub fn run_background(
     cmd: &[String],
     task_id: &TaskId,
@@ -22,12 +27,35 @@ pub fn run_background(
     let stdout_file = File::create(&stdout_path)?;
     let stderr_file = File::create(&stderr_path)?;
 
-    // Spawn with output redirected to files
-    let child = Command::new(&cmd[0])
+    // Build command with redirected stdio
+    let mut command = Command::new(&cmd[0]);
+    command
         .args(&cmd[1..])
-        .stdout(stdout_file.try_clone().map_err(|_| SmolError::other("Failed to clone stdout file"))?)
+        .stdout(
+            stdout_file
+                .try_clone()
+                .map_err(|_| SmolError::other("Failed to clone stdout file"))?,
+        )
         .stderr(stderr_file)
-        .spawn()?;
+        .stdin(Stdio::null());
+
+    // Daemonize on Unix: create a new session so the child is
+    // detached from the parent's terminal and process group.
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt;
+        // SAFETY: pre_exec runs in the child after fork but before exec.
+        // libc::setsid() is safe to call here and is the standard way
+        // to daemonize a process.
+        unsafe {
+            command.pre_exec(|| {
+                libc::setsid();
+                Ok(())
+            });
+        }
+    }
+
+    let child = command.spawn()?;
 
     let meta = TaskMeta {
         id: task_id.clone(),
@@ -45,6 +73,9 @@ pub fn run_background(
         warning_count: 0,
         pid: Some(child.id()),
         background_pid: Some(child.id()),
+        input_tokens: None,
+        output_tokens: None,
+        compression_ratio: None,
     };
 
     Ok((meta, child))

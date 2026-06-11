@@ -28,6 +28,27 @@ pub fn format_summary(summary: &Summary) -> String {
         parts.push(format!("warnings:{}", summary.warning_count));
     }
 
+    // Append token reduction info
+    let reduction_pct = if summary.input_tokens > 0 {
+        let ratio = summary.output_tokens as f64 / summary.input_tokens as f64;
+        ((1.0 - ratio) * 100.0).round() as i64
+    } else {
+        0
+    };
+    let reduction_str = if reduction_pct > 0 {
+        format!("-{}%", reduction_pct)
+    } else if reduction_pct < 0 {
+        format!("+{}%", reduction_pct.abs())
+    } else {
+        format!("{}%", 0)
+    };
+    parts.push(format!(
+        "[tokens: {} → {} ({})]",
+        summary.input_tokens,
+        summary.output_tokens,
+        reduction_str,
+    ));
+
     let mut result = parts.join(" ");
 
     // Add first few error lines if present
@@ -78,6 +99,9 @@ mod tests {
             infos: vec![],
             truncated: false,
             truncated_count: None,
+            input_tokens: 0,
+            output_tokens: 0,
+            compression_ratio: 1.0,
         }
     }
 
@@ -88,7 +112,33 @@ mod tests {
             ..Default::default()
         };
         let out = format_summary(&s);
-        assert_eq!(out, "success");
+        assert_eq!(out, "success [tokens: 0 → 0 (0%)]");
+    }
+
+    #[test]
+    fn test_format_summary_with_reduction() {
+        let s = Summary {
+            status: SummaryStatus::Success,
+            input_tokens: 100,
+            output_tokens: 25,
+            compression_ratio: 0.25,
+            ..Default::default()
+        };
+        let out = format_summary(&s);
+        assert_eq!(out, "success [tokens: 100 → 25 (-75%)]");
+    }
+
+    #[test]
+    fn test_format_summary_with_expansion() {
+        let s = Summary {
+            status: SummaryStatus::Success,
+            input_tokens: 10,
+            output_tokens: 40,
+            compression_ratio: 4.0,
+            ..Default::default()
+        };
+        let out = format_summary(&s);
+        assert_eq!(out, "success [tokens: 10 → 40 (+300%)]");
     }
 
     #[test]
@@ -99,6 +149,8 @@ mod tests {
         assert!(out.contains("errors:5"));
         assert!(out.contains("warnings:3"));
         assert!(out.contains("main.rs:42"));
+        assert!(out.contains("[tokens:"));
+        assert!(out.contains("→"));
     }
 
     #[test]

@@ -1,0 +1,8 @@
+npm notice created a lockfile as package-lock.json
+npm notice 
+npm notice added 1234 packages from 567 contributors and audited 1234 packages in 15.678s
+npm notice 
+npm notice 42 packages are looking for funding
+npm notice run `npm fund` for details
+npm notice 
+found 0 vulnerabilities
