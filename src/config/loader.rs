@@ -11,6 +11,20 @@ const BUILT_IN_PARSERS: &[(&str, &str)] = &[
     ("gcc", include_str!("../../parsers/gcc.toml")),
     ("docker", include_str!("../../parsers/docker.toml")),
     ("git", include_str!("../../parsers/git.toml")),
+    ("gradle", include_str!("../../parsers/gradle.toml")),
+    ("npm", include_str!("../../parsers/npm.toml")),
+    ("yarn", include_str!("../../parsers/yarn.toml")),
+    ("go", include_str!("../../parsers/go.toml")),
+    ("tsc", include_str!("../../parsers/tsc.toml")),
+    ("python", include_str!("../../parsers/python.toml")),
+    ("rustc", include_str!("../../parsers/rustc.toml")),
+    ("make", include_str!("../../parsers/make.toml")),
+    ("kubectl", include_str!("../../parsers/kubectl.toml")),
+    ("terraform", include_str!("../../parsers/terraform.toml")),
+    ("jest", include_str!("../../parsers/jest.toml")),
+    ("eslint", include_str!("../../parsers/eslint.toml")),
+    ("node", include_str!("../../parsers/node.toml")),
+    ("curl", include_str!("../../parsers/curl.toml")),
 ];
 
 /// Load all parsers: built-in first, then override from filesystem parsers_dir.
@@ -100,6 +114,11 @@ mod tests {
         assert!(parsers.contains_key("maven"), "maven parser must exist");
         assert!(parsers.contains_key("cargo"), "cargo parser must exist");
         assert!(parsers.contains_key("gcc"), "gcc parser must exist");
+        assert!(parsers.contains_key("gradle"), "gradle parser must exist");
+        assert!(parsers.contains_key("npm"), "npm parser must exist");
+        assert!(parsers.contains_key("go"), "go parser must exist");
+        assert!(parsers.contains_key("python"), "python parser must exist");
+        assert!(parsers.contains_key("make"), "make parser must exist");
     }
 
     #[test]

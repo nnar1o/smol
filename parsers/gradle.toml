@@ -1,0 +1,69 @@
+name = "gradle"
+description = "Gradle build output parser"
+
+[detection]
+command_prefix = "gradle"
+
+[detection.heuristic]
+regex = "> Configure project|> Task"
+min_lines = 2
+
+ignore_patterns = [
+    "^> Configure project .+$",
+    "^> Task .+$",
+    "^\\s*$",
+    "^Downloading .+$",
+    "^\\d+%$",
+]
+
+[[error_patterns]]
+regex = "^BUILD FAILED(?P<message>.*)$"
+severity = "error"
+is_fatal = true
+
+[[error_patterns]]
+regex = "^ERROR:\\s+(?P<message>.+)$"
+severity = "error"
+
+[[error_patterns]]
+regex = "^error:\\s+(?P<message>.+)$"
+severity = "error"
+
+[[error_patterns]]
+regex = "^FAILURE:\\s+(?P<message>.+)$"
+severity = "error"
+is_fatal = true
+
+[[error_patterns]]
+regex = "^(?P<file>.+?):(?P<line>\\d+):\\s+error:\\s+(?P<message>.+)$"
+severity = "error"
+
+[[error_patterns]]
+regex = "^(?P<file>.+?):(?P<line>\\d+):\\s+warning:\\s+error:\\s+(?P<message>.+)$"
+severity = "error"
+
+[[warning_patterns]]
+regex = "^w:\\s+(?P<message>.+)$"
+severity = "warning"
+
+[[warning_patterns]]
+regex = "^warning:\\s+(?P<message>.+)$"
+severity = "warning"
+
+[[warning_patterns]]
+regex = "^(?P<file>.+?):(?P<line>\\d+):\\s+warning:\\s+(?P<message>.+)$"
+severity = "warning"
+
+[status_patterns]
+success = [
+    { regex = "BUILD SUCCESSFUL", group = "message" },
+]
+failure = [
+    { regex = "BUILD FAILED", group = "message" },
+    { regex = "BUILD FAILURE", group = "message" },
+]
+
+[summary]
+max_errors = 3
+max_warnings = 5
+show_error_lines = true

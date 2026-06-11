@@ -1,0 +1,58 @@
+name = "node"
+description = "Node.js runtime output parser"
+
+[detection]
+command_prefix = "node"
+
+[detection.heuristic]
+regex = "Error:|throw|Uncaught"
+min_lines = 1
+
+ignore_patterns = [
+    "^\\s*$",
+    "^\\s+at\\s+",
+]
+
+[[error_patterns]]
+regex = "^Error:\\s+(?P<message>.+)$"
+severity = "error"
+is_fatal = true
+
+[[error_patterns]]
+regex = "^\\w+Error:\\s+(?P<message>.+)$"
+severity = "error"
+
+[[error_patterns]]
+regex = "^Uncaught\\s+(?P<message>.+)$"
+severity = "error"
+is_fatal = true
+
+[[error_patterns]]
+regex = "^throw\\s+(?P<message>.+)$"
+severity = "error"
+is_fatal = true
+
+[[error_patterns]]
+regex = "^(?P<file>.+?):(?P<line>\\d+):(?P<column>\\d+):\\s+error:\\s+(?P<message>.+)$"
+severity = "error"
+
+[[warning_patterns]]
+regex = "^\\(node:\\d+\\)\\s+Warning:\\s+(?P<message>.+)$"
+severity = "warning"
+
+[[warning_patterns]]
+regex = "^Warning:\\s+(?P<message>.+)$"
+severity = "warning"
+
+[status_patterns]
+success = []
+failure = [
+    { regex = "process exited with code", group = "message" },
+    { regex = "Uncaught", group = "message" },
+    { regex = "Error:", group = "message" },
+]
+
+[summary]
+max_errors = 3
+max_warnings = 5
+show_error_lines = true

@@ -1,0 +1,57 @@
+name = "kubectl"
+description = "Kubernetes kubectl output parser"
+
+[detection]
+command_prefix = "kubectl"
+
+[detection.heuristic]
+regex = "kubectl.kubernetes.io/|Error from server"
+min_lines = 1
+
+ignore_patterns = [
+    "^kubectl.kubernetes.io/",
+    "^\\s*$",
+]
+
+[[error_patterns]]
+regex = "^error:\\s+(?P<message>.+)$"
+severity = "error"
+
+[[error_patterns]]
+regex = "^Error from server\\b(?P<message>.*)$"
+severity = "error"
+is_fatal = true
+
+[[error_patterns]]
+regex = "^failed\\b(?P<message>.*)$"
+severity = "error"
+
+[[error_patterns]]
+regex = "^(?P<message>.+?)\\s+FAILED$"
+severity = "error"
+
+[[error_patterns]]
+regex = "^The connection to the server .+ was refused$"
+severity = "error"
+is_fatal = true
+
+[[warning_patterns]]
+regex = "^Warning:\\s+(?P<message>.+)$"
+severity = "warning"
+
+[status_patterns]
+success = [
+    { regex = "^$", group = "message" },
+    { regex = "created", group = "message" },
+    { regex = "configured", group = "message" },
+    { regex = "deleted", group = "message" },
+]
+failure = [
+    { regex = "^error:", group = "message" },
+    { regex = "Error from server", group = "message" },
+]
+
+[summary]
+max_errors = 3
+max_warnings = 5
+show_error_lines = true

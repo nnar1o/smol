@@ -41,6 +41,12 @@ pub struct Summary {
     pub truncated: bool,
     /// The first N lines that were truncated (if truncation happened).
     pub truncated_count: Option<u64>,
+    /// Estimated tokens in the raw command output.
+    pub input_tokens: usize,
+    /// Estimated tokens in the formatted summary.
+    pub output_tokens: usize,
+    /// Ratio of output_tokens / input_tokens (0.0–1.0).
+    pub compression_ratio: f64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -48,6 +54,16 @@ pub enum SummaryStatus {
     Success,
     Failure,
     Unknown,
+}
+
+impl SummaryStatus {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            SummaryStatus::Success => "success",
+            SummaryStatus::Failure => "failure",
+            SummaryStatus::Unknown => "done",
+        }
+    }
 }
 
 impl Summary {
@@ -64,7 +80,16 @@ impl Summary {
             infos: Vec::new(),
             truncated: false,
             truncated_count: None,
+            input_tokens: 0,
+            output_tokens: 0,
+            compression_ratio: 1.0,
         }
+    }
+
+    /// Estimate token count using a simple heuristic (chars / 4,
+    /// matching Claude's approximate tokenization).
+    pub fn estimate_tokens(text: &str) -> usize {
+        (text.len() + 2) / 4
     }
 }
 

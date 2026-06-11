@@ -1,0 +1,56 @@
+name = "curl"
+description = "cURL HTTP client output parser"
+
+[detection]
+command_prefix = "curl"
+
+[detection.heuristic]
+regex = "curl: \\(|HTTP/\\d\\.\\d \\d+"
+min_lines = 1
+
+ignore_patterns = [
+    "^\\s*$",
+    "^\\s*%\\s+Total",
+    "^\\s*\\d+\\s+\\d+",
+    "\\d+:\\d+:\\d+\\s+--:--:--",
+    "^\\s*\\d+\\s+\\d+%",
+]
+
+[[error_patterns]]
+regex = "^curl: \\((?P<message>.+)\\)$"
+severity = "error"
+is_fatal = true
+
+[[error_patterns]]
+regex = "^error:\\s+(?P<message>.+)$"
+severity = "error"
+
+[[error_patterns]]
+regex = "^(?P<message>Could not resolve host):\\s+.+$"
+severity = "error"
+is_fatal = true
+
+[[error_patterns]]
+regex = "^(?P<message>Failed to connect).+$"
+severity = "error"
+is_fatal = true
+
+[[warning_patterns]]
+regex = "^Warning:\\s+(?P<message>.+)$"
+severity = "warning"
+
+[status_patterns]
+success = [
+    { regex = "HTTP/\\d\\.\\d 200", group = "message" },
+    { regex = "HTTP/\\d\\.\\d 2\\d\\d", group = "message" },
+]
+failure = [
+    { regex = "curl: \\(", group = "message" },
+    { regex = "HTTP/\\d\\.\\d 4\\d\\d", group = "message" },
+    { regex = "HTTP/\\d\\.\\d 5\\d\\d", group = "message" },
+]
+
+[summary]
+max_errors = 3
+max_warnings = 5
+show_error_lines = true

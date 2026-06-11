@@ -1,0 +1,94 @@
+name = "python"
+description = "Python interpreter/pip output parser"
+
+[detection]
+command_prefix = "python"
+
+[detection.heuristic]
+regex = "Traceback \\(most recent call last\\)"
+min_lines = 1
+
+ignore_patterns = [
+    "^\\s*$",
+    "^Collecting .+$",
+    "^Downloading .+$",
+    "^\\s+\\|.+\\|\\s+[\\d.]+/\\d+",
+    "^Requirement already satisfied",
+    "^Installing collected packages",
+    "^Successfully installed",
+    "^WARNING: pip",
+]
+
+[[error_patterns]]
+regex = "^Traceback \\(most recent call last\\)$"
+severity = "error"
+is_fatal = true
+
+[[error_patterns]]
+regex = "^(?P<file>.+?):(?P<line>\\d+):\\s+Error:\\s+(?P<message>.+)$"
+severity = "error"
+
+[[error_patterns]]
+regex = "^(?P<message>\\w+Error):\\s+.+$"
+severity = "error"
+
+[[error_patterns]]
+regex = "^(?P<message>SyntaxError):\\s+.+$"
+severity = "error"
+
+[[error_patterns]]
+regex = "^(?P<message>ImportError):\\s+.+$"
+severity = "error"
+
+[[error_patterns]]
+regex = "^(?P<message>ModuleNotFoundError):\\s+.+$"
+severity = "error"
+
+[[error_patterns]]
+regex = "^(?P<message>IndentationError):\\s+.+$"
+severity = "error"
+
+[[error_patterns]]
+regex = "^(?P<message>TypeError):\\s+.+$"
+severity = "error"
+
+[[error_patterns]]
+regex = "^(?P<message>ValueError):\\s+.+$"
+severity = "error"
+
+[[error_patterns]]
+regex = "^(?P<message>KeyError):\\s+.+$"
+severity = "error"
+
+[[error_patterns]]
+regex = "^(?P<message>AttributeError):\\s+.+$"
+severity = "error"
+
+[[error_patterns]]
+regex = "^(?P<message>NameError):\\s+.+$"
+severity = "error"
+
+[[warning_patterns]]
+regex = "^Warning:\\s+(?P<message>.+)$"
+severity = "warning"
+
+[[warning_patterns]]
+regex = "^(?P<file>.+?):(?P<line>\\d+):\\s+Warning:\\s+(?P<message>.+)$"
+severity = "warning"
+
+[[warning_patterns]]
+regex = "^(?P<file>.+?):(?P<line>\\d+):\\s+DeprecationWarning:\\s+(?P<message>.+)$"
+severity = "warning"
+
+[status_patterns]
+success = [
+    { regex = "Successfully installed", group = "message" },
+]
+failure = [
+    { regex = "Traceback \\(most recent call last\\)", group = "message" },
+]
+
+[summary]
+max_errors = 3
+max_warnings = 5
+show_error_lines = true

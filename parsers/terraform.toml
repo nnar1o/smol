@@ -1,0 +1,48 @@
+name = "terraform"
+description = "Terraform/OpenTofu output parser"
+
+[detection]
+command_prefix = "terraform"
+
+[detection.heuristic]
+regex = "Terraform|Plan:|Apply complete|No changes"
+min_lines = 1
+
+ignore_patterns = [
+    "^\\s*$",
+    "Refreshing state",
+    "Reading\\.\\.\\.",
+]
+
+[[error_patterns]]
+regex = "^Error:\\s+(?P<message>.+)$"
+severity = "error"
+is_fatal = true
+
+[[error_patterns]]
+regex = "^Error: "
+severity = "error"
+is_fatal = true
+
+[[error_patterns]]
+regex = "^(?P<message>\\w+Error):\\s+.+$"
+severity = "error"
+
+[[warning_patterns]]
+regex = "^Warning:\\s+(?P<message>.+)$"
+severity = "warning"
+
+[status_patterns]
+success = [
+    { regex = "Apply complete", group = "message" },
+    { regex = "No changes", group = "message" },
+    { regex = "Plan: \\d+ to add", group = "message" },
+]
+failure = [
+    { regex = "^Error:", group = "message" },
+]
+
+[summary]
+max_errors = 3
+max_warnings = 5
+show_error_lines = true
