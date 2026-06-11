@@ -1,0 +1,49 @@
+name = "docker"
+description = "Docker build/pull output parser"
+
+[detection]
+command_prefix = "docker"
+
+[detection.heuristic]
+regex = "^#[0-9]+ "
+min_lines = 3
+
+ignore_patterns = [
+    "^\\s*$",
+    "^#[0-9]+ \\[",
+    "^#[0-9]+ DONE",
+    "^#[0-9]+ CANCELED",
+    "^ => ",
+    "^ =># ",
+]
+
+[[error_patterns]]
+regex = "^(?:ERROR|Error|error):\\s+(?P<message>.+)$"
+severity = "error"
+
+[[error_patterns]]
+regex = "^failed to(?P<message>.+)$"
+severity = "error"
+is_fatal = true
+
+[[error_patterns]]
+regex = "^executor failed running\\b(?P<message>.+)$"
+severity = "error"
+is_fatal = true
+
+[[warning_patterns]]
+regex = "^(?:WARNING|Warning|warning):\\s+(?P<message>.+)$"
+severity = "warning"
+
+[status_patterns]
+success = [
+    { regex = "Successfully built", group = "message" },
+    { regex = "Successfully tagged", group = "message" },
+    { regex = "Status: Downloaded newer image", group = "message" },
+]
+failure = []
+
+[summary]
+max_errors = 3
+max_warnings = 5
+show_error_lines = true

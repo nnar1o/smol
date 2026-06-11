@@ -1,0 +1,19 @@
+[package]
+name = "smol"
+version = "0.1.0"
+edition = "2024"
+description = "Smart Minimal Output Logger — run commands and get summarized output for LLMs"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+regex = "1"
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "2"
+rand = "0.8"
+
+[dev-dependencies]
+assert_cmd = "2"
+predicates = "3"
+tempfile = "3"
