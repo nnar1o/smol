@@ -14,8 +14,8 @@ pub fn execute_command(cmd: CliCommand) -> Result<i32, SmolError> {
         CliCommand::Run { command, mode } => {
             execute_run(command, mode)
         }
-        CliCommand::Status { task_id } => {
-            execute_status(task_id)
+        CliCommand::Status { task_id, tokens } => {
+            execute_status(task_id, tokens)
         }
         CliCommand::Log { task_id, errors, warnings, stats } => {
             execute_log(task_id, errors, warnings, stats)
@@ -185,7 +185,7 @@ fn execute_run(command: Vec<String>, mode: Mode) -> Result<i32, SmolError> {
     }
 }
 
-fn execute_status(task_id: String) -> Result<i32, SmolError> {
+fn execute_status(task_id: String, tokens: bool) -> Result<i32, SmolError> {
     let tasks_dir = storage::paths::tasks_dir();
     storage::init(&tasks_dir)?;
 
@@ -194,39 +194,23 @@ fn execute_status(task_id: String) -> Result<i32, SmolError> {
     let mut meta = storage::load_task_meta(&id, &tasks_dir)?;
     let _ = update_completed_task(&mut meta, &tasks_dir);
 
-    // Line 1: id  status  command
-    print!("{}  {}  {}", meta.id, meta.status.as_str(), meta.command);
-    if let Some(d) = meta.duration_sec {
-        print!("  [{}s]", d);
-    }
+    // Line 1: status  errors:N
+    print!("{}  errors:{}", meta.status.as_str(), meta.error_count);
     println!();
 
-    // Line 2: err/warn + optional fields
-    let mut parts: Vec<String> = Vec::new();
-    parts.push(format!("err:{}", meta.error_count));
-    parts.push(format!("warn:{}", meta.warning_count));
-    if let Some(code) = meta.exit_code {
-        parts.push(format!("exit:{}", code));
-    }
-    if let Some(in_tok) = meta.input_tokens {
-        if let Some(out_tok) = meta.output_tokens {
-            let reduction = if in_tok > 0 {
-                ((1.0 - out_tok as f64 / in_tok as f64) * 100.0).round() as i64
-            } else {
-                0
-            };
-            parts.push(format!("tok:{}→{}({}%)", in_tok, out_tok, reduction));
+    // Token info only when --tokens flag is set
+    if tokens {
+        if let Some(in_tok) = meta.input_tokens {
+            if let Some(out_tok) = meta.output_tokens {
+                let reduction = if in_tok > 0 {
+                    ((1.0 - out_tok as f64 / in_tok as f64) * 100.0).round() as i64
+                } else {
+                    0
+                };
+                println!("tokens: {}→{} ({}%)", in_tok, out_tok, reduction);
+            }
         }
     }
-    if let Some(total) = meta.test_total {
-        if let Some(passed) = meta.test_passed {
-            let failed = meta.test_failed.unwrap_or(0);
-            let errors = meta.test_errors.unwrap_or(0);
-            let skipped = meta.test_skipped.unwrap_or(0);
-            parts.push(format!("tests:{}/ {}/ {}/ {}/{}", total, passed, failed, errors, skipped));
-        }
-    }
-    println!("  {}", parts.join("  "));
     Ok(0)
 }
 

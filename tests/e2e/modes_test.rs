@@ -116,7 +116,7 @@ fn test_background_task_status() {
         .output().unwrap();
     let stdout = String::from_utf8_lossy(&status_output.stdout);
     assert!(stdout.contains("success"), "Should show success status: {}", stdout);
-    assert!(stdout.contains("hello-status"), "Should show command: {}", stdout);
+    assert!(stdout.contains("errors:0"), "Should show errors:0: {}", stdout);
 }
 
 /// Background mode: multi-word command preserves full command.
@@ -136,8 +136,8 @@ fn test_background_multi_word_command() {
         .output().unwrap();
     let stdout = String::from_utf8_lossy(&status_output.stdout);
     assert!(
-        stdout.contains("echo multi word test"),
-        "Should show full command, got: {}",
+        stdout.contains("success"),
+        "Should show success, got: {}",
         stdout
     );
 }

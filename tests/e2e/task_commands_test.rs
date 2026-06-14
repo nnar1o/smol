@@ -57,15 +57,13 @@ fn test_task_lifecycle() {
 
     // 2. Check status shows correct fields (compact format)
     let status_out = smol_output(&temp, &["status", &task_id]);
-    assert!(status_out.contains(&task_id), "Status should contain task id");
-    assert!(status_out.contains("lifecycle-test-123"), "Status should contain command");
     assert!(status_out.contains("success"), "Status should show success status");
-    assert!(status_out.contains("err:"), "Status should have err field");
-    assert!(status_out.contains("warn:"), "Status should have warn field");
+    assert!(status_out.contains("errors:"), "Status should have errors field");
 
     // 3. Check status last works
     let status_last = smol_output(&temp, &["status", "last"]);
-    assert!(status_last.contains(&task_id), "status last should show our task");
+    assert!(status_last.contains("success"), "status last should show success");
+    assert!(status_last.contains("errors:0"), "status last should show zero errors");
 
     // 4. Check list shows the task
     let list_out = smol_output(&temp, &["list"]);
@@ -103,7 +101,7 @@ fn test_clean_default() {
 
     // Task should still exist
     let status_out = smol_output(&temp, &["status", &task_id]);
-    assert!(status_out.contains(&task_id), "Task should still exist after default clean");
+    assert!(status_out.contains("success"), "Task should still exist after default clean");
 }
 
 /// Test `status` for a task that does not exist.
@@ -166,7 +164,7 @@ fn test_clean_keeps_recent() {
 
     // Task should still exist
     let status_out = smol_output(&temp, &["status", &task_id]);
-    assert!(status_out.contains(&task_id), "Task should still exist after clean with 24h threshold");
+    assert!(status_out.contains("success"), "Task should still exist after clean with 24h threshold");
 }
 
 /// Test that `log` with `--errors` flag works.

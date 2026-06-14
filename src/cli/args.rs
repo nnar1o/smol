@@ -32,7 +32,7 @@ impl Default for Mode {
 #[derive(Debug, Clone)]
 pub enum CliCommand {
     Run { command: Vec<String>, mode: Mode },
-    Status { task_id: String },
+    Status { task_id: String, tokens: bool },
     Log { task_id: String, errors: bool, warnings: bool, stats: bool },
     List { running: bool },
     Cancel { task_id: String },
@@ -76,7 +76,8 @@ pub fn parse_cli() -> CliCommand {
     match subcommand {
         "status" => {
             let task_id = raw_args.get(1).cloned().unwrap_or_else(|| "last".to_string());
-            CliCommand::Status { task_id }
+            let tokens = has_flag(&raw_args, "--tokens", "-t");
+            CliCommand::Status { task_id, tokens }
         }
         "log" => {
             let task_id = raw_args.get(1).cloned().unwrap_or_else(|| {

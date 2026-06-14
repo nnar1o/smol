@@ -28,27 +28,6 @@ pub fn format_summary(summary: &Summary) -> String {
         parts.push(format!("warnings:{}", summary.warning_count));
     }
 
-    // Append token reduction info
-    let reduction_pct = if summary.input_tokens > 0 {
-        let ratio = summary.output_tokens as f64 / summary.input_tokens as f64;
-        ((1.0 - ratio) * 100.0).round() as i64
-    } else {
-        0
-    };
-    let reduction_str = if reduction_pct > 0 {
-        format!("-{}%", reduction_pct)
-    } else if reduction_pct < 0 {
-        format!("+{}%", reduction_pct.abs())
-    } else {
-        format!("{}%", 0)
-    };
-    parts.push(format!(
-        "[tokens: {} → {} ({})]",
-        summary.input_tokens,
-        summary.output_tokens,
-        reduction_str,
-    ));
-
     let mut result = parts.join(" ");
 
     // Append test results if present
@@ -167,7 +146,7 @@ mod tests {
             ..Default::default()
         };
         let out = format_summary(&s);
-        assert_eq!(out, "success [tokens: 0 → 0 (0%)]");
+        assert_eq!(out, "success");
     }
 
     #[test]
@@ -180,7 +159,7 @@ mod tests {
             ..Default::default()
         };
         let out = format_summary(&s);
-        assert_eq!(out, "success [tokens: 100 → 25 (-75%)]");
+        assert_eq!(out, "success");
     }
 
     #[test]
@@ -193,7 +172,7 @@ mod tests {
             ..Default::default()
         };
         let out = format_summary(&s);
-        assert_eq!(out, "success [tokens: 10 → 40 (+300%)]");
+        assert_eq!(out, "success");
     }
 
     #[test]
@@ -204,8 +183,6 @@ mod tests {
         assert!(out.contains("errors:5"));
         assert!(out.contains("warnings:3"));
         assert!(out.contains("main.rs:42"));
-        assert!(out.contains("[tokens:"));
-        assert!(out.contains("→"));
     }
 
     #[test]

@@ -6,7 +6,7 @@ use smol::parse::summarizer;
 fn test_format_empty_summary() {
     let s = Summary::default();
     let out = summarizer::format_summary(&s);
-    assert_eq!(out, "done [tokens: 0 → 0 (0%)]");
+    assert_eq!(out, "done");
 }
 
 /// Test formatting a success summary with errors but no warnings.
@@ -40,9 +40,7 @@ fn test_format_large_tokens() {
         ..Default::default()
     };
     let out = summarizer::format_summary(&s);
-    assert!(out.contains("1000000"));
-    assert!(out.contains("50000"));
-    assert!(out.contains("-95%"));
+    assert!(out.starts_with("success"));
 }
 
 /// Test formatting where tokens expand (output > input).
@@ -55,7 +53,7 @@ fn test_format_token_expansion() {
         ..Default::default()
     };
     let out = summarizer::format_summary(&s);
-    assert!(out.contains("+400%"));
+    assert!(out.starts_with("failure"));
 }
 
 /// Test trim_summary with empty summary.
