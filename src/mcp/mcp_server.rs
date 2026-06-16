@@ -171,7 +171,7 @@ fn handle_tools_list(request: &JsonRpcRequest) -> JsonRpcResponse {
         },
         {
             "name": "smol_log",
-            "description": "Retrieve the log output of a task. By default returns the full output log. Set 'errors' to true to filter for error lines only, or 'warnings' to true for warning lines only. Set 'stats' to true to return task metadata as JSON instead of log text.",
+            "description": "Retrieve the log output of a task. By default returns the full output log. Set 'errors' to true to filter for error lines only, or 'warnings' to true for warning lines only. Set 'stats' to true to return task metadata as JSON instead of log text. Use 'tail' to return only the last N lines and 'max_chars' to limit total output size.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -193,6 +193,16 @@ fn handle_tools_list(request: &JsonRpcRequest) -> JsonRpcResponse {
                         "type": "boolean",
                         "description": "Return task metadata as JSON instead of log text",
                         "default": false
+                    },
+                    "tail": {
+                        "type": "integer",
+                        "description": "Return only the last N lines of the log. 0 means no limit.",
+                        "default": 0
+                    },
+                    "max_chars": {
+                        "type": "integer",
+                        "description": "Truncate output to at most this many characters. 0 means no limit.",
+                        "default": 0
                     }
                 },
                 "required": ["task_id"]
@@ -658,6 +668,8 @@ fn handle_smol_log(args: &Value) -> Result<Value, protocol::JsonRpcErrorObj> {
     let errors = args.get("errors").and_then(|v| v.as_bool()).unwrap_or(false);
     let warnings = args.get("warnings").and_then(|v| v.as_bool()).unwrap_or(false);
     let stats = args.get("stats").and_then(|v| v.as_bool()).unwrap_or(false);
+    let tail = args.get("tail").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
+    let max_chars = args.get("max_chars").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
 
     let cfg = config::load_global_config().map_err(|e| {
         protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, format!("Failed to load config: {}", e))
@@ -713,6 +725,26 @@ fn handle_smol_log(args: &Value) -> Result<Value, protocol::JsonRpcErrorObj> {
             .join("\n")
     } else {
         output
+    };
+
+    let filtered = if tail > 0 {
+        let lines: Vec<&str> = filtered.lines().collect();
+        let start = lines.len().saturating_sub(tail);
+        lines[start..].join("\n")
+    } else {
+        filtered
+    };
+
+    let filtered = if max_chars > 0 && filtered.len() > max_chars {
+        let mut truncated = filtered[..max_chars].to_string();
+        // Avoid splitting in the middle of a line
+        if let Some(pos) = truncated.rfind('\n') {
+            truncated.truncate(pos);
+        }
+        truncated.push_str(&format!("\n... [truncated, {} of {} chars shown]", max_chars, filtered.len()));
+        truncated
+    } else {
+        filtered
     };
 
     Ok(json!({ "log": filtered }))
