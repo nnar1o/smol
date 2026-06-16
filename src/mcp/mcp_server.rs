@@ -111,9 +111,13 @@ fn handle_initialize(request: &JsonRpcRequest) -> JsonRpcResponse {
     protocol::make_response(
         request.id.clone(),
         json!({
-            "protocolVersion": "0.1.0",
+            "protocolVersion": "2024-11-05",
             "capabilities": {
                 "tools": {}
+            },
+            "serverInfo": {
+                "name": "smol",
+                "version": env!("CARGO_PKG_VERSION")
             }
         }),
     )
