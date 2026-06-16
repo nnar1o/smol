@@ -56,16 +56,22 @@ pub fn run() {
         };
 
         let is_notification = request.id.is_none() && request.method != "initialize";
-        let response = handle_request(&request);
+        let (response, should_exit) = handle_request(&request);
 
         // Notifications (requests without an id) do not get a response.
-        if is_notification {
+        if is_notification && !should_exit {
             continue;
         }
 
-        let resp_json = serde_json::to_string(&response).unwrap();
-        let _ = writeln!(stdout, "{}", resp_json);
-        let _ = stdout.flush();
+        if !is_notification {
+            let resp_json = serde_json::to_string(&response).unwrap();
+            let _ = writeln!(stdout, "{}", resp_json);
+            let _ = stdout.flush();
+        }
+
+        if should_exit {
+            break;
+        }
     }
 }
 
@@ -73,32 +79,31 @@ pub fn run() {
 // Request dispatching
 // ---------------------------------------------------------------------------
 
-fn handle_request(request: &JsonRpcRequest) -> JsonRpcResponse {
+fn handle_request(request: &JsonRpcRequest) -> (JsonRpcResponse, bool) {
     match request.method.as_str() {
-        "initialize" => handle_initialize(request),
-        "tools/list" => handle_tools_list(request),
-        "tools/call" => handle_tools_call(request),
+        "initialize" => (handle_initialize(request), false),
+        "tools/list" => (handle_tools_list(request), false),
+        "tools/call" => (handle_tools_call(request), false),
         "shutdown" => {
-            // Client asked to shut down — return success (caller should exit
-            // after receiving the response, but we just continue the loop).
-            protocol::make_response(request.id.clone(), json!({}))
+            // Client asked to shut down — return success but stay alive
+            // until the subsequent "exit" request per MCP spec.
+            (protocol::make_response(request.id.clone(), json!({})), false)
         }
         "exit" => {
-            // Follow the MCP lifecycle: exit after shutdown.
-            // We respond and then stop reading (EOF on next iteration).
-            protocol::make_response(request.id.clone(), json!({}))
+            // Follow the MCP lifecycle: respond then terminate.
+            (protocol::make_response(request.id.clone(), json!({})), true)
         }
         _ => {
             // Ignore notifications and $-prefixed methods gracefully.
             if request.method.starts_with("notifications/") || request.method.starts_with("$/") {
-                return protocol::make_response(request.id.clone(), json!({}));
+                return (protocol::make_response(request.id.clone(), json!({})), false);
             }
-            protocol::make_error(
+            (protocol::make_error(
                 request.id.clone(),
                 protocol::METHOD_NOT_FOUND,
                 format!("Method not found: {}", request.method),
                 None,
-            )
+            ), false)
         }
     }
 }
