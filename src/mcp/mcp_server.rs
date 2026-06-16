@@ -147,7 +147,7 @@ fn handle_tools_list(request: &JsonRpcRequest) -> JsonRpcResponse {
                     },
                     "mode": {
                         "type": "string",
-                        "enum": ["sync", "auto", "bg"],
+                        "enum": ["sync", "auto", "bg", "background"],
                         "description": "Execution mode: sync (wait for completion), auto (wait briefly then background), bg (immediate background)",
                         "default": "auto"
                     }
