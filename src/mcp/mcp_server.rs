@@ -84,6 +84,8 @@ fn handle_request(request: &JsonRpcRequest) -> (JsonRpcResponse, bool) {
         "initialize" => (handle_initialize(request), false),
         "tools/list" => (handle_tools_list(request), false),
         "tools/call" => (handle_tools_call(request), false),
+        "resources/list" => (handle_resources_list(request), false),
+        "resources/read" => (handle_resources_read(request), false),
         "shutdown" => {
             // Client asked to shut down — return success but stay alive
             // until the subsequent "exit" request per MCP spec.
@@ -118,7 +120,8 @@ fn handle_initialize(request: &JsonRpcRequest) -> JsonRpcResponse {
         json!({
             "protocolVersion": "2024-11-05",
             "capabilities": {
-                "tools": {}
+                "tools": {},
+                "resources": {}
             },
             "serverInfo": {
                 "name": "smol",
@@ -904,6 +907,176 @@ fn handle_smol_wait(args: &Value) -> Result<Value, protocol::JsonRpcErrorObj> {
 }
 
 // ---------------------------------------------------------------------------
+// Resource handlers
+// ---------------------------------------------------------------------------
+
+fn handle_resources_list(request: &JsonRpcRequest) -> JsonRpcResponse {
+    let cfg = match config::load_global_config() {
+        Ok(c) => c,
+        Err(e) => {
+            return protocol::make_error(
+                request.id.clone(),
+                protocol::INTERNAL_ERROR,
+                format!("Failed to load config: {}", e),
+                None,
+            );
+        }
+    };
+    let tasks_dir = get_tasks_dir(&cfg);
+    let _ = storage::init(&tasks_dir);
+
+    let tasks = match storage::list_tasks(&tasks_dir, None) {
+        Ok(t) => t,
+        Err(_) => Vec::new(),
+    };
+
+    let resources: Vec<Value> = tasks
+        .iter()
+        .take(20)
+        .flat_map(|t| {
+            let id = t.id.as_str();
+            vec![
+                json!({
+                    "uri": format!("smol://tasks/{}/output", id),
+                    "name": format!("Task {} output", id),
+                    "description": "Standard output log of the task",
+                    "mimeType": "text/plain"
+                }),
+                json!({
+                    "uri": format!("smol://tasks/{}/error", id),
+                    "name": format!("Task {} error log", id),
+                    "description": "Standard error log of the task",
+                    "mimeType": "text/plain"
+                }),
+                json!({
+                    "uri": format!("smol://tasks/{}/meta", id),
+                    "name": format!("Task {} metadata", id),
+                    "description": "TOML metadata of the task",
+                    "mimeType": "application/json"
+                }),
+            ]
+        })
+        .collect();
+
+    protocol::make_response(request.id.clone(), json!({ "resources": resources }))
+}
+
+fn handle_resources_read(request: &JsonRpcRequest) -> JsonRpcResponse {
+    let params = match &request.params {
+        Some(p) => p,
+        None => {
+            return protocol::make_error(
+                request.id.clone(),
+                protocol::INVALID_PARAMS,
+                "Missing params".into(),
+                None,
+            );
+        }
+    };
+
+    let uri = match params.get("uri").and_then(|v| v.as_str()) {
+        Some(u) => u,
+        None => {
+            return protocol::make_error(
+                request.id.clone(),
+                protocol::INVALID_PARAMS,
+                "Missing 'uri' parameter".into(),
+                None,
+            );
+        }
+    };
+
+    // Parse uri: smol://tasks/{task_id}/{resource_type}
+    let parts: Vec<&str> = uri.split('/').collect();
+    if parts.len() < 4 || parts[0] != "smol:" || parts[2] != "tasks" {
+        return protocol::make_error(
+            request.id.clone(),
+            protocol::INVALID_PARAMS,
+            format!("Invalid resource URI: {}", uri),
+            None,
+        );
+    }
+
+    let task_id_str = parts[3];
+    let resource_type = if parts.len() > 4 { parts[4] } else { "output" };
+
+    let cfg = match config::load_global_config() {
+        Ok(c) => c,
+        Err(e) => {
+            return protocol::make_error(
+                request.id.clone(),
+                protocol::INTERNAL_ERROR,
+                format!("Failed to load config: {}", e),
+                None,
+            );
+        }
+    };
+    let tasks_dir = get_tasks_dir(&cfg);
+    let _ = storage::init(&tasks_dir);
+
+    let id = match resolve_task_id(task_id_str, &tasks_dir) {
+        Ok(id) => id,
+        Err(e) => {
+            return protocol::make_error(
+                request.id.clone(),
+                protocol::INVALID_PARAMS,
+                format!("{}", e),
+                None,
+            );
+        }
+    };
+
+    let task_dir = std::path::Path::new(&tasks_dir).join(id.as_str());
+
+    match resource_type {
+        "output" => {
+            let content = std::fs::read_to_string(task_dir.join("output.log")).unwrap_or_default();
+            protocol::make_response(request.id.clone(), json!({
+                "contents": [{
+                    "uri": uri,
+                    "mimeType": "text/plain",
+                    "text": content
+                }]
+            }))
+        }
+        "error" => {
+            let content = std::fs::read_to_string(task_dir.join("error.log")).unwrap_or_default();
+            protocol::make_response(request.id.clone(), json!({
+                "contents": [{
+                    "uri": uri,
+                    "mimeType": "text/plain",
+                    "text": content
+                }]
+            }))
+        }
+        "meta" => match storage::load_task_meta(&id, &tasks_dir) {
+            Ok(meta) => {
+                let value = serde_json::to_value(&meta).unwrap_or_default();
+                protocol::make_response(request.id.clone(), json!({
+                    "contents": [{
+                        "uri": uri,
+                        "mimeType": "application/json",
+                        "text": serde_json::to_string_pretty(&value).unwrap_or_default()
+                    }]
+                }))
+            }
+            Err(e) => protocol::make_error(
+                request.id.clone(),
+                protocol::INTERNAL_ERROR,
+                format!("Failed to read task meta: {}", e),
+                None,
+            ),
+        },
+        _ => protocol::make_error(
+            request.id.clone(),
+            protocol::INVALID_PARAMS,
+            format!("Unknown resource type: {}", resource_type),
+            None,
+        ),
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
@@ -1025,5 +1198,27 @@ mod tests {
         assert_eq!(parse_duration("60").unwrap(), 60);
         assert!(parse_duration("abc").is_err());
         assert!(parse_duration("").is_err());
+    }
+
+    #[test]
+    fn test_handle_resources_list() {
+        let req = make_request("resources/list", Some(json!(10)), None);
+        let (resp, should_exit) = handle_request(&req);
+        assert!(!should_exit);
+        assert!(resp.error.is_none(), "expected no error, got {:?}", resp.error);
+        let result = resp.result.expect("expected result");
+        assert!(result["resources"].is_array(), "resources should be an array");
+    }
+
+    #[test]
+    fn test_handle_resources_read_invalid_uri() {
+        let req = make_request(
+            "resources/read",
+            Some(json!(11)),
+            Some(json!({ "uri": "invalid://uri" })),
+        );
+        let (resp, _) = handle_request(&req);
+        assert!(resp.error.is_some(), "expected error for invalid URI");
+        assert_eq!(resp.error.unwrap().code, protocol::INVALID_PARAMS);
     }
 }
