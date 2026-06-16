@@ -1,6 +1,7 @@
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::io::{BufRead, Write};
+use std::sync::atomic::{AtomicU8, Ordering};
 
 use crate::config::{self, GlobalConfig};
 use crate::core::{ParserConfig, SmolError, SummaryStatus, Task, TaskId, TaskMeta, TaskMode, TaskStatus};
@@ -8,6 +9,51 @@ use crate::exec;
 use crate::mcp::protocol::{self, JsonRpcRequest, JsonRpcResponse};
 use crate::parse;
 use crate::storage;
+
+// ---------------------------------------------------------------------------
+// MCP log levels (ordered by severity; lower = more severe)
+// ---------------------------------------------------------------------------
+
+const LOG_ALERT: u8 = 0;
+const LOG_CRITICAL: u8 = 1;
+const LOG_ERROR: u8 = 2;
+const LOG_WARNING: u8 = 3;
+const LOG_NOTICE: u8 = 4;
+const LOG_INFO: u8 = 5;
+const LOG_DEBUG: u8 = 6;
+
+/// Current minimum log level for $/log notifications. Starts at NOTICE.
+static MIN_LOG_LEVEL: AtomicU8 = AtomicU8::new(LOG_NOTICE);
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/// Write a JSON-RPC 2.0 notification to stdout (no `id` field).
+fn write_notification(method: &str, params: Value) {
+    let notification = json!({
+        "jsonrpc": "2.0",
+        "method": method,
+        "params": params,
+    });
+    if let Ok(json_str) = serde_json::to_string(&notification) {
+        let mut stdout = std::io::stdout();
+        let _ = writeln!(stdout, "{}", json_str);
+        let _ = stdout.flush();
+    }
+}
+
+/// Send a `$/log` notification if `level` is at or above the minimum log level.
+fn send_log_notification(level: u8, level_name: &str, logger: &str, data: Value) {
+    if level > MIN_LOG_LEVEL.load(Ordering::Relaxed) {
+        return; // Below minimum level, skip
+    }
+    write_notification("$/log", json!({
+        "level": level_name,
+        "logger": logger,
+        "data": data,
+    }));
+}
 
 // ---------------------------------------------------------------------------
 // Public entry point
@@ -95,6 +141,7 @@ fn handle_request(request: &JsonRpcRequest) -> (JsonRpcResponse, bool) {
             // Follow the MCP lifecycle: respond then terminate.
             (protocol::make_response(request.id.clone(), json!({})), true)
         }
+        "logging/setLevel" => (handle_logging_set_level(request), false),
         _ => {
             // Ignore notifications and $-prefixed methods gracefully.
             if request.method.starts_with("notifications/") || request.method.starts_with("$/") {
@@ -121,7 +168,9 @@ fn handle_initialize(request: &JsonRpcRequest) -> JsonRpcResponse {
             "protocolVersion": "2024-11-05",
             "capabilities": {
                 "tools": {},
-                "resources": {}
+                "resources": {},
+                "progress": {},
+                "logging": {}
             },
             "serverInfo": {
                 "name": "smol",
@@ -129,6 +178,46 @@ fn handle_initialize(request: &JsonRpcRequest) -> JsonRpcResponse {
             }
         }),
     )
+}
+
+// ---------------------------------------------------------------------------
+// logging/setLevel handler
+// ---------------------------------------------------------------------------
+
+fn handle_logging_set_level(request: &JsonRpcRequest) -> JsonRpcResponse {
+    let level = match &request.params {
+        Some(params) => params.get("level").and_then(|v| v.as_str()),
+        None => None,
+    };
+
+    let new_level = match level {
+        Some("alert") => LOG_ALERT,
+        Some("critical") => LOG_CRITICAL,
+        Some("error") => LOG_ERROR,
+        Some("warning") => LOG_WARNING,
+        Some("notice") => LOG_NOTICE,
+        Some("info") => LOG_INFO,
+        Some("debug") => LOG_DEBUG,
+        Some(other) => {
+            return protocol::make_error(
+                request.id.clone(),
+                protocol::INVALID_PARAMS,
+                format!("Unknown log level: {}", other),
+                None,
+            );
+        }
+        None => {
+            return protocol::make_error(
+                request.id.clone(),
+                protocol::INVALID_PARAMS,
+                "Missing 'level' parameter".into(),
+                None,
+            );
+        }
+    };
+
+    MIN_LOG_LEVEL.store(new_level, Ordering::Relaxed);
+    protocol::make_response(request.id.clone(), json!({}))
 }
 
 // ---------------------------------------------------------------------------
@@ -311,7 +400,12 @@ fn handle_tools_call(request: &JsonRpcRequest) -> JsonRpcResponse {
         }
     };
 
-    let arguments = params.get("arguments").cloned().unwrap_or(json!({}));
+    let mut arguments = params.get("arguments").cloned().unwrap_or(json!({}));
+    if let Some(token) = params.get("_meta").and_then(|m| m.get("progressToken")) {
+        if let Some(obj) = arguments.as_object_mut() {
+            obj.insert("_progressToken".to_string(), token.clone());
+        }
+    }
 
     let result = match name {
         "smol_run" => handle_smol_run(&arguments),
@@ -538,6 +632,10 @@ fn run_sync_op(
         stderr_path: format!("{}/{}/error.log", tasks_dir, task_id.as_str()),
     };
     let _ = storage::save_task(&task);
+
+    send_log_notification(LOG_INFO, "info", "smol-mcp", json!({
+        "message": format!("Task {} completed with exit code {:?}", task_id, result.exit_code)
+    }));
 
     Ok(json!({
         "summary": formatted,
@@ -833,6 +931,10 @@ fn handle_smol_clean(args: &Value) -> Result<Value, protocol::JsonRpcErrorObj> {
         protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, msg)
     })?;
 
+    send_log_notification(LOG_INFO, "info", "smol-mcp", json!({
+        "message": format!("Cleaned up {} task(s)", count)
+    }));
+
     Ok(json!({
         "cleaned": count,
         "message": format!("Cleaned up {} task(s).", count),
@@ -876,6 +978,8 @@ fn handle_smol_wait(args: &Value) -> Result<Value, protocol::JsonRpcErrorObj> {
         protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, msg)
     })?;
 
+    let progress_token = args.get("_progressToken").cloned();
+
     let start = std::time::Instant::now();
     let timeout_dur = std::time::Duration::from_secs(timeout_secs);
 
@@ -886,6 +990,14 @@ fn handle_smol_wait(args: &Value) -> Result<Value, protocol::JsonRpcErrorObj> {
         })?;
 
         if meta.status.is_terminal() {
+            if let Some(ref token) = progress_token {
+                write_notification("notifications/progress", json!({
+                    "progressToken": token,
+                    "progress": timeout_secs,
+                    "total": timeout_secs,
+                    "message": format!("Task {} completed with status {:?}", id.as_str(), meta.status)
+                }));
+            }
             let mut value = serde_json::to_value(&meta).unwrap_or_default();
             if let Some(obj) = value.as_object_mut() {
                 obj.insert("waited".into(), json!(true));
@@ -900,6 +1012,17 @@ fn handle_smol_wait(args: &Value) -> Result<Value, protocol::JsonRpcErrorObj> {
                 obj.insert("wait_timeout".into(), json!(true));
             }
             return Ok(value);
+        }
+
+        // Send progress notification between polls
+        if let Some(ref token) = progress_token {
+            let elapsed = start.elapsed().as_secs();
+            write_notification("notifications/progress", json!({
+                "progressToken": token,
+                "progress": elapsed,
+                "total": timeout_secs,
+                "message": format!("Waiting for task {} ({:.1}s of {}s)", id.as_str(), elapsed as f64, timeout_secs)
+            }));
         }
 
         std::thread::sleep(std::time::Duration::from_secs(interval_secs));
@@ -1211,6 +1334,16 @@ mod tests {
     }
 
     #[test]
+    fn test_write_notification() {
+        // Just verify the function doesn't panic
+        write_notification("notifications/progress", json!({
+            "progressToken": 1,
+            "progress": 50,
+            "total": 100
+        }));
+    }
+
+    #[test]
     fn test_handle_resources_read_invalid_uri() {
         let req = make_request(
             "resources/read",
@@ -1220,5 +1353,43 @@ mod tests {
         let (resp, _) = handle_request(&req);
         assert!(resp.error.is_some(), "expected error for invalid URI");
         assert_eq!(resp.error.unwrap().code, protocol::INVALID_PARAMS);
+    }
+
+    #[test]
+    fn test_handle_logging_set_level() {
+        // Reset to default
+        MIN_LOG_LEVEL.store(LOG_NOTICE, Ordering::Relaxed);
+
+        // Test setting debug level
+        let req = make_request(
+            "logging/setLevel",
+            Some(json!(20)),
+            Some(json!({ "level": "debug" })),
+        );
+        let (resp, should_exit) = handle_request(&req);
+        assert!(!should_exit);
+        assert!(resp.error.is_none());
+        assert_eq!(MIN_LOG_LEVEL.load(Ordering::Relaxed), LOG_DEBUG);
+
+        // Test invalid level
+        let req = make_request(
+            "logging/setLevel",
+            Some(json!(21)),
+            Some(json!({ "level": "invalid" })),
+        );
+        let (resp, _) = handle_request(&req);
+        assert!(resp.error.is_some());
+
+        // Reset for other tests
+        MIN_LOG_LEVEL.store(LOG_NOTICE, Ordering::Relaxed);
+    }
+
+    #[test]
+    fn test_send_log_notification_below_level() {
+        // At NOTICE level, DEBUG should not send
+        MIN_LOG_LEVEL.store(LOG_NOTICE, Ordering::Relaxed);
+        // This just shouldn't panic - the notification won't be written because
+        // LOG_DEBUG > MIN_LOG_LEVEL
+        send_log_notification(LOG_DEBUG, "debug", "test", json!({"msg": "test"}));
     }
 }
