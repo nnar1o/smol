@@ -461,7 +461,7 @@ fn handle_smol_run(args: &Value) -> Result<Value, protocol::JsonRpcErrorObj> {
 
     match mode_str {
         "sync" => run_sync_op(&command, &cfg, &parsers, &tasks_dir),
-        "bg" | "background" => run_bg_op(&command, &tasks_dir),
+        "bg" | "background" => run_bg_op(&command, &tasks_dir, cfg.max_output_bytes),
         _ => run_auto_op(&command, &cfg, &parsers, &tasks_dir),
     }
 }
@@ -509,9 +509,9 @@ fn run_sync_op(
     }))
 }
 
-fn run_bg_op(command: &[String], tasks_dir: &str) -> Result<Value, protocol::JsonRpcErrorObj> {
+fn run_bg_op(command: &[String], tasks_dir: &str, max_output_bytes: u64) -> Result<Value, protocol::JsonRpcErrorObj> {
     let task_id = TaskId::new();
-    let (meta, child) = exec::backgrounder::run_background(command, &task_id, tasks_dir, 10 * 1024 * 1024)
+    let (meta, child) = exec::backgrounder::run_background(command, &task_id, tasks_dir, max_output_bytes)
         .map_err(|e| {
             protocol::JsonRpcErrorObj::new(
                 protocol::INTERNAL_ERROR,
@@ -589,7 +589,7 @@ fn run_auto_op(
                 "status": summary_status_to_task_status(&summary).as_str(),
             }))
         }
-        exec::watcher::WatchResult::NeedsBackground { .. } => run_bg_op(command, tasks_dir),
+        exec::watcher::WatchResult::NeedsBackground { .. } => run_bg_op(command, tasks_dir, cfg.max_output_bytes),
     }
 }
 
@@ -601,7 +601,10 @@ fn handle_smol_status(args: &Value) -> Result<Value, protocol::JsonRpcErrorObj> 
             protocol::JsonRpcErrorObj::new(protocol::INVALID_PARAMS, "Missing 'task_id' parameter")
         })?;
 
-    let tasks_dir = storage::paths::tasks_dir();
+    let cfg = config::load_global_config().map_err(|e| {
+        protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, format!("Failed to load config: {}", e))
+    })?;
+    let tasks_dir = get_tasks_dir(&cfg);
     storage::init(&tasks_dir).map_err(|e| {
         protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, format!("Storage init failed: {}", e))
     })?;
@@ -631,7 +634,10 @@ fn handle_smol_log(args: &Value) -> Result<Value, protocol::JsonRpcErrorObj> {
     let warnings = args.get("warnings").and_then(|v| v.as_bool()).unwrap_or(false);
     let stats = args.get("stats").and_then(|v| v.as_bool()).unwrap_or(false);
 
-    let tasks_dir = storage::paths::tasks_dir();
+    let cfg = config::load_global_config().map_err(|e| {
+        protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, format!("Failed to load config: {}", e))
+    })?;
+    let tasks_dir = get_tasks_dir(&cfg);
     storage::init(&tasks_dir).map_err(|e| {
         protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, format!("Storage init failed: {}", e))
     })?;
@@ -690,7 +696,10 @@ fn handle_smol_log(args: &Value) -> Result<Value, protocol::JsonRpcErrorObj> {
 fn handle_smol_list(args: &Value) -> Result<Value, protocol::JsonRpcErrorObj> {
     let running_only = args.get("running").and_then(|v| v.as_bool()).unwrap_or(false);
 
-    let tasks_dir = storage::paths::tasks_dir();
+    let cfg = config::load_global_config().map_err(|e| {
+        protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, format!("Failed to load config: {}", e))
+    })?;
+    let tasks_dir = get_tasks_dir(&cfg);
     storage::init(&tasks_dir).map_err(|e| {
         protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, format!("Storage init failed: {}", e))
     })?;
@@ -715,7 +724,10 @@ fn handle_smol_cancel(args: &Value) -> Result<Value, protocol::JsonRpcErrorObj> 
             protocol::JsonRpcErrorObj::new(protocol::INVALID_PARAMS, "Missing 'task_id' parameter")
         })?;
 
-    let tasks_dir = storage::paths::tasks_dir();
+    let cfg = config::load_global_config().map_err(|e| {
+        protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, format!("Failed to load config: {}", e))
+    })?;
+    let tasks_dir = get_tasks_dir(&cfg);
     storage::init(&tasks_dir).map_err(|e| {
         protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, format!("Storage init failed: {}", e))
     })?;
@@ -743,7 +755,10 @@ fn handle_smol_clean(args: &Value) -> Result<Value, protocol::JsonRpcErrorObj> {
         .and_then(|v| v.as_str())
         .unwrap_or("24h");
 
-    let tasks_dir = storage::paths::tasks_dir();
+    let cfg = config::load_global_config().map_err(|e| {
+        protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, format!("Failed to load config: {}", e))
+    })?;
+    let tasks_dir = get_tasks_dir(&cfg);
     storage::init(&tasks_dir).map_err(|e| {
         protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, format!("Storage init failed: {}", e))
     })?;
