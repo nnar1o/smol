@@ -136,7 +136,7 @@ fn handle_tools_list(request: &JsonRpcRequest) -> JsonRpcResponse {
     let tools = json!([
         {
             "name": "smol_run",
-            "description": "Execute a command and return summarized output",
+            "description": "Execute a command and return a summarized analysis of the output. Use 'sync' mode to wait for completion (best for fast commands), 'auto' mode to wait briefly then fall back to background if the command takes too long (default), or 'bg' mode to run immediately in the background. Returns a summary with task_id, exit_code, and status. For background tasks, use smol_status to check progress and smol_log to retrieve output.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -157,13 +157,13 @@ fn handle_tools_list(request: &JsonRpcRequest) -> JsonRpcResponse {
         },
         {
             "name": "smol_status",
-            "description": "Get the status and metadata of a task",
+            "description": "Get the status and metadata of a task by its task_id. Use 'last' as the task_id to query the most recently created task. Returns full task metadata including status (running/success/failed/cancelled/timed_out), exit_code, duration, error_count, warning_count, and test results if available.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "task_id": {
                         "type": "string",
-                        "description": "Task ID or 'last' for the most recent task"
+                        "description": "Task ID, or 'last' for the most recent task"
                     }
                 },
                 "required": ["task_id"]
@@ -171,13 +171,13 @@ fn handle_tools_list(request: &JsonRpcRequest) -> JsonRpcResponse {
         },
         {
             "name": "smol_log",
-            "description": "Get the log output of a task",
+            "description": "Retrieve the log output of a task. By default returns the full output log. Set 'errors' to true to filter for error lines only, or 'warnings' to true for warning lines only. Set 'stats' to true to return task metadata as JSON instead of log text.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "task_id": {
                         "type": "string",
-                        "description": "Task ID"
+                        "description": "Task ID, or 'last' for the most recent task"
                     },
                     "errors": {
                         "type": "boolean",
@@ -200,7 +200,7 @@ fn handle_tools_list(request: &JsonRpcRequest) -> JsonRpcResponse {
         },
         {
             "name": "smol_list",
-            "description": "List all tasks, optionally filtered to running only",
+            "description": "List all stored tasks, optionally filtered to show only running tasks. Set 'running' to true to see only currently executing tasks. Returns an array of task metadata objects.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -214,13 +214,13 @@ fn handle_tools_list(request: &JsonRpcRequest) -> JsonRpcResponse {
         },
         {
             "name": "smol_cancel",
-            "description": "Cancel a running task by sending SIGTERM to its process",
+            "description": "Cancel a running task by sending SIGTERM to its process. The task_id must correspond to a currently running background task. Returns success status after sending the signal. Note: the process may take a moment to terminate after cancellation.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "task_id": {
                         "type": "string",
-                        "description": "Task ID to cancel"
+                        "description": "Task ID, or 'last' for the most recent task"
                     }
                 },
                 "required": ["task_id"]
@@ -228,7 +228,7 @@ fn handle_tools_list(request: &JsonRpcRequest) -> JsonRpcResponse {
         },
         {
             "name": "smol_clean",
-            "description": "Remove old completed tasks from storage",
+            "description": "Remove old completed, failed, or cancelled tasks from storage to free disk space. The 'older' parameter accepts duration strings like '24h' (hours), '7d' (days), '30m' (minutes), '3600s' (seconds), or plain seconds. Only non-running tasks are removed. Default is '24h'.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
