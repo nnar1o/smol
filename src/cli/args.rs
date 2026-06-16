@@ -16,7 +16,7 @@ impl Mode {
         match s {
             "sync" => Mode::Sync,
             "background" | "bg" => Mode::Background,
-            "interactive" | "int" => Mode::Interactive,
+            "interactive" | "int" | "i" => Mode::Interactive,
             _ => Mode::Auto,
         }
     }
@@ -169,7 +169,7 @@ pub fn parse_cli() -> CliCommand {
                     "--sync" => mode = Mode::Sync,
                     "--bg" => mode = Mode::Background,
                     "--auto" => mode = Mode::Auto,
-                    "--interactive" | "--int" => mode = Mode::Interactive,
+                    "--interactive" | "--int" | "-i" => mode = Mode::Interactive,
                     "--mode" => {
                         if let Some(val) = raw_args.get(i + 1) {
                             mode = Mode::from_str(val);
