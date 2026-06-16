@@ -227,6 +227,30 @@ fn handle_tools_list(request: &JsonRpcRequest) -> JsonRpcResponse {
             }
         },
         {
+            "name": "smol_wait",
+            "description": "Wait for a background task to complete. Polls the task status at intervals until the task reaches a terminal state (success/failed/cancelled/timed_out) or the timeout is reached. Returns the final task metadata if completed, or the current metadata if the timeout expired.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "task_id": {
+                        "type": "string",
+                        "description": "Task ID, or 'last' for the most recent task"
+                    },
+                    "timeout": {
+                        "type": "integer",
+                        "description": "Maximum seconds to wait (default 60)",
+                        "default": 60
+                    },
+                    "interval": {
+                        "type": "integer",
+                        "description": "Seconds between status polls (default 2)",
+                        "default": 2
+                    }
+                },
+                "required": ["task_id"]
+            }
+        },
+        {
             "name": "smol_clean",
             "description": "Remove old completed, failed, or cancelled tasks from storage to free disk space. The 'older' parameter accepts duration strings like '24h' (hours), '7d' (days), '30m' (minutes), '3600s' (seconds), or plain seconds. Only non-running tasks are removed. Default is '24h'.",
             "inputSchema": {
@@ -283,6 +307,7 @@ fn handle_tools_call(request: &JsonRpcRequest) -> JsonRpcResponse {
         "smol_list" => handle_smol_list(&arguments),
         "smol_cancel" => handle_smol_cancel(&arguments),
         "smol_clean" => handle_smol_clean(&arguments),
+        "smol_wait" => handle_smol_wait(&arguments),
         _ => {
             return protocol::make_error(
                 request.id.clone(),
@@ -777,4 +802,71 @@ fn handle_smol_clean(args: &Value) -> Result<Value, protocol::JsonRpcErrorObj> {
         "cleaned": count,
         "message": format!("Cleaned up {} task(s).", count),
     }))
+}
+
+fn handle_smol_wait(args: &Value) -> Result<Value, protocol::JsonRpcErrorObj> {
+    let task_id_str = args
+        .get("task_id")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| {
+            protocol::JsonRpcErrorObj::new(protocol::INVALID_PARAMS, "Missing 'task_id' parameter")
+        })?;
+
+    let timeout_secs: u64 = args
+        .get("timeout")
+        .and_then(|v| v.as_i64())
+        .unwrap_or(60) as u64;
+    let interval_secs: u64 = args
+        .get("interval")
+        .and_then(|v| v.as_i64())
+        .unwrap_or(2) as u64;
+
+    if interval_secs == 0 {
+        return Err(protocol::JsonRpcErrorObj::new(
+            protocol::INVALID_PARAMS,
+            "Interval must be greater than 0",
+        ));
+    }
+
+    let cfg = config::load_global_config().map_err(|e| {
+        protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, format!("Failed to load config: {}", e))
+    })?;
+    let tasks_dir = get_tasks_dir(&cfg);
+    storage::init(&tasks_dir).map_err(|e| {
+        protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, format!("Storage init failed: {}", e))
+    })?;
+
+    let id = resolve_task_id(task_id_str, &tasks_dir).map_err(|e| {
+        let msg = format!("{}", e);
+        protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, msg)
+    })?;
+
+    let start = std::time::Instant::now();
+    let timeout_dur = std::time::Duration::from_secs(timeout_secs);
+
+    loop {
+        let meta = storage::load_task_meta(&id, &tasks_dir).map_err(|e| {
+            let msg = format!("{}", e);
+            protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, msg)
+        })?;
+
+        if meta.status.is_terminal() {
+            let mut value = serde_json::to_value(&meta).unwrap_or_default();
+            if let Some(obj) = value.as_object_mut() {
+                obj.insert("waited".into(), json!(true));
+            }
+            return Ok(value);
+        }
+
+        if start.elapsed() >= timeout_dur {
+            let mut value = serde_json::to_value(&meta).unwrap_or_default();
+            if let Some(obj) = value.as_object_mut() {
+                obj.insert("waited".into(), json!(false));
+                obj.insert("wait_timeout".into(), json!(true));
+            }
+            return Ok(value);
+        }
+
+        std::thread::sleep(std::time::Duration::from_secs(interval_secs));
+    }
 }
