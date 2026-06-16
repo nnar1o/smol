@@ -902,3 +902,128 @@ fn handle_smol_wait(args: &Value) -> Result<Value, protocol::JsonRpcErrorObj> {
         std::thread::sleep(std::time::Duration::from_secs(interval_secs));
     }
 }
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    fn make_request(method: &str, id: Option<Value>, params: Option<Value>) -> JsonRpcRequest {
+        JsonRpcRequest {
+            jsonrpc: "2.0".into(),
+            id,
+            method: method.into(),
+            params,
+        }
+    }
+
+    #[test]
+    fn test_handle_initialize() {
+        let req = make_request("initialize", Some(json!(1)), None);
+        let (resp, should_exit) = handle_request(&req);
+
+        assert!(!should_exit);
+        assert!(resp.error.is_none(), "expected no error, got {:?}", resp.error);
+
+        let result = resp.result.expect("expected result");
+        assert_eq!(result["protocolVersion"], "2024-11-05");
+        assert_eq!(result["serverInfo"]["name"], "smol");
+        assert!(result["serverInfo"]["version"].is_string());
+    }
+
+    #[test]
+    fn test_handle_tools_list() {
+        let req = make_request("tools/list", Some(json!(2)), None);
+        let (resp, should_exit) = handle_request(&req);
+
+        assert!(!should_exit);
+        assert!(resp.error.is_none(), "expected no error, got {:?}", resp.error);
+
+        let result = resp.result.expect("expected result");
+        let tools = result["tools"]
+            .as_array()
+            .expect("tools should be an array");
+
+        assert_eq!(tools.len(), 7);
+
+        let names: Vec<&str> = tools.iter().filter_map(|t| t["name"].as_str()).collect();
+        assert_eq!(names, vec![
+            "smol_run",
+            "smol_status",
+            "smol_log",
+            "smol_list",
+            "smol_cancel",
+            "smol_wait",
+            "smol_clean",
+        ]);
+
+        for tool in tools {
+            assert!(tool["name"].is_string(), "tool missing name");
+            assert!(tool["description"].is_string(), "tool missing description");
+            assert!(tool["inputSchema"].is_object(), "tool missing inputSchema");
+        }
+    }
+
+    #[test]
+    fn test_handle_tools_call_unknown_tool() {
+        let req = make_request(
+            "tools/call",
+            Some(json!(3)),
+            Some(json!({ "name": "nonexistent" })),
+        );
+        let (resp, should_exit) = handle_request(&req);
+
+        assert!(!should_exit);
+        let err = resp.error.expect("expected error");
+        assert_eq!(err.code, protocol::METHOD_NOT_FOUND);
+    }
+
+    #[test]
+    fn test_handle_method_not_found() {
+        let req = make_request("foo/bar", Some(json!(4)), None);
+        let (resp, should_exit) = handle_request(&req);
+
+        assert!(!should_exit);
+        let err = resp.error.expect("expected error");
+        assert_eq!(err.code, protocol::METHOD_NOT_FOUND);
+    }
+
+    #[test]
+    fn test_notifications_get_empty_object_result() {
+        let req = make_request("notifications/initialized", None, None);
+        let (resp, should_exit) = handle_request(&req);
+
+        assert!(!should_exit);
+        assert!(resp.error.is_none());
+        assert_eq!(resp.result, Some(json!({})));
+    }
+
+    #[test]
+    fn test_exit_returns_should_exit() {
+        let req = make_request("exit", Some(json!(5)), None);
+        let (_, should_exit) = handle_request(&req);
+        assert!(should_exit);
+    }
+
+    #[test]
+    fn test_shutdown_returns_should_not_exit() {
+        let req = make_request("shutdown", Some(json!(6)), None);
+        let (_, should_exit) = handle_request(&req);
+        assert!(!should_exit);
+    }
+
+    #[test]
+    fn test_parse_duration() {
+        assert_eq!(parse_duration("24h").unwrap(), 86400);
+        assert_eq!(parse_duration("7d").unwrap(), 604800);
+        assert_eq!(parse_duration("30m").unwrap(), 1800);
+        assert_eq!(parse_duration("3600s").unwrap(), 3600);
+        assert_eq!(parse_duration("60").unwrap(), 60);
+        assert!(parse_duration("abc").is_err());
+        assert!(parse_duration("").is_err());
+    }
+}
