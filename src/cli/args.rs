@@ -3,11 +3,11 @@
 pub enum Mode {
     /// Wait for the command to finish (blocking).
     Sync,
-    /// Wait a few seconds; if still running, switch to background (default).
+    /// Wait a few seconds; if still running, switch to background.
     Auto,
     /// Launch immediately in background.
     Background,
-    /// Run synchronously with live progress display (spinner + counters).
+    /// Run synchronously with live progress display (spinner + counters) — default.
     Interactive,
 }
 
@@ -15,16 +15,17 @@ impl Mode {
     pub fn from_str(s: &str) -> Self {
         match s {
             "sync" => Mode::Sync,
+            "auto" => Mode::Auto,
             "background" | "bg" => Mode::Background,
             "interactive" | "int" | "i" => Mode::Interactive,
-            _ => Mode::Auto,
+            _ => Mode::Interactive,
         }
     }
 }
 
 impl Default for Mode {
     fn default() -> Self {
-        Mode::Auto
+        Mode::Interactive
     }
 }
 
@@ -160,7 +161,7 @@ pub fn parse_cli() -> CliCommand {
         }
         _ => {
             // Direct command: detect mode flags, rest is the command
-            let mut mode = Mode::Auto;
+            let mut mode = Mode::Interactive;
             let mut cmd_args: Vec<String> = Vec::new();
             let mut i = 0;
             while i < raw_args.len() {
@@ -207,9 +208,9 @@ fn print_usage_and_exit() -> ! {
     eprintln!();
     eprintln!("Modes:");
     eprintln!("  --sync       Wait for command to finish");
-    eprintln!("  --auto       Wait a few seconds, then background if slow (default)");
+    eprintln!("  --auto       Wait a few seconds, then background if slow");
     eprintln!("  --bg         Run in background immediately");
-    eprintln!("  --interactive  Run with live progress display (spinner + counters)");
+    eprintln!("  --interactive  Run with live progress display (spinner + counters) [default]");
     #[cfg(debug_assertions)]
     eprintln!();
     #[cfg(debug_assertions)]
@@ -247,7 +248,7 @@ mod tests {
         assert_eq!(Mode::from_str("background"), Mode::Background);
         assert_eq!(Mode::from_str("interactive"), Mode::Interactive);
         assert_eq!(Mode::from_str("int"), Mode::Interactive);
-        assert_eq!(Mode::from_str("unknown"), Mode::Auto);
+        assert_eq!(Mode::from_str("unknown"), Mode::Interactive);
     }
 
     #[test]

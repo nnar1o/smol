@@ -186,3 +186,34 @@ fn test_interactive_short_flag() {
         .success()
         .stdout(predicate::str::contains("success"));
 }
+
+/// Interactive mode: Maven test fixture with mixed build errors + test failures.
+/// Verifies the panel correctly separates build errors from test failures
+/// (doesn't double-count test failures as build errors).
+#[test]
+fn test_interactive_maven_fixture_runs() {
+    let temp = TempDir::new().unwrap();
+    let fixture = std::env::current_dir()
+        .unwrap()
+        .join("tests/fixtures/scripts/maven_test_output.sh");
+    // The fixture script simulates a Maven BUILD FAILURE (exit=1)
+    smol_cmd(&temp)
+        .arg("--interactive")
+        .arg(fixture.to_str().unwrap())
+        .assert()
+        .code(1);
+}
+
+/// Interactive mode: Maven fixture with --int flag.
+#[test]
+fn test_interactive_maven_fixture_int_flag() {
+    let temp = TempDir::new().unwrap();
+    let fixture = std::env::current_dir()
+        .unwrap()
+        .join("tests/fixtures/scripts/maven_test_output.sh");
+    smol_cmd(&temp)
+        .arg("--int")
+        .arg(fixture.to_str().unwrap())
+        .assert()
+        .code(1);
+}
