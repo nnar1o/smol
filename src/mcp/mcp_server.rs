@@ -62,10 +62,18 @@ fn send_log_notification(level: u8, level_name: &str, logger: &str, data: Value)
 /// Run the MCP server loop: read JSON-RPC 2.0 requests from stdin,
 /// dispatch them, and write responses to stdout.
 pub fn run() {
+    // Register OS signal handlers (SIGINT/SIGTERM) for graceful shutdown.
+    #[cfg(unix)]
+    crate::exec::signal::init();
+
     let stdin = std::io::stdin();
     let mut stdout = std::io::stdout();
 
     for line in stdin.lock().lines() {
+        // If an OS signal was received, exit the loop gracefully.
+        if crate::exec::signal::is_cancelled() {
+            break;
+        }
         let line = match line {
             Ok(l) => l,
             Err(e) => {
