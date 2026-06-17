@@ -434,8 +434,24 @@ fn handle_tools_call(request: &JsonRpcRequest) -> JsonRpcResponse {
     };
 
     match result {
-        Ok(value) => protocol::make_response(request.id.clone(), value),
-        Err(e) => protocol::make_error(request.id.clone(), e.code, e.message, e.data),
+        Ok(value) => {
+            let text = serde_json::to_string_pretty(&value).unwrap_or_default();
+            protocol::make_response(request.id.clone(), json!({
+                "content": [{ "type": "text", "text": text }],
+                "isError": false
+            }))
+        }
+        Err(e) => {
+            let error_text = serde_json::to_string_pretty(&json!({
+                "code": e.code,
+                "message": e.message,
+                "data": e.data,
+            })).unwrap_or_default();
+            protocol::make_response(request.id.clone(), json!({
+                "content": [{ "type": "text", "text": error_text }],
+                "isError": true
+            }))
+        }
     }
 }
 
