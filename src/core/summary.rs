@@ -108,10 +108,16 @@ impl Summary {
         }
     }
 
-    /// Estimate token count using a simple heuristic (chars / 4,
-    /// matching Claude's approximate tokenization).
+    /// Estimate token count using a heuristic that accounts for
+    /// symbol density in code: alphanumeric chars avg ~4/token,
+    /// non-alphanumeric symbols avg ~2/token, whitespace is free.
     pub fn estimate_tokens(text: &str) -> usize {
-        (text.len() + 2) / 4
+        if text.is_empty() {
+            return 0;
+        }
+        let alnum = text.chars().filter(|c| c.is_alphanumeric()).count();
+        let symbols = text.chars().filter(|c| !c.is_alphanumeric() && !c.is_whitespace()).count();
+        (alnum / 4 + symbols / 2).max(1)
     }
 }
 
@@ -154,16 +160,22 @@ mod tests {
 
     #[test]
     fn test_estimate_tokens_short() {
-        // (3 + 2) / 4 = 1
+        // alnum=3, symbols=0 → 3/4 + 0/2 = 0 → max(1,0) = 1
         assert_eq!(Summary::estimate_tokens("abc"), 1);
     }
 
     #[test]
     fn test_estimate_tokens_exact() {
-        // (4 + 2) / 4 = 1
+        // alnum=4, symbols=0 → 4/4 + 0/2 = 1
         assert_eq!(Summary::estimate_tokens("abcd"), 1);
-        // (8 + 2) / 4 = 2
+        // alnum=8, symbols=0 → 8/4 + 0/2 = 2
         assert_eq!(Summary::estimate_tokens("abcdefgh"), 2);
+    }
+
+    #[test]
+    fn test_estimate_tokens_with_symbols() {
+        // alnum=4 (abcd), symbols=4((+)/) → 4/4 + 4/2 = 1 + 2 = 3
+        assert_eq!(Summary::estimate_tokens("a(b + c) / d"), 3);
     }
 
     #[test]

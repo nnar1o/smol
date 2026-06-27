@@ -10,7 +10,7 @@ fn smol_cmd(temp: &TempDir) -> Command {
     cmd
 }
 
-/// Sync mode: run `echo hello` and verify the summary is printed.
+/// Sync mode: run `echo hello` and verify the output is passed through.
 #[test]
 fn test_sync_mode_completes() {
     let temp = TempDir::new().unwrap();
@@ -18,7 +18,7 @@ fn test_sync_mode_completes() {
         .arg("--sync").arg("echo").arg("hello-sync")
         .assert()
         .success()
-        .stdout(predicate::str::contains("success"));
+        .stdout(predicate::str::contains("hello-sync"));
 }
 
 /// Sync mode: non-zero exit code should propagate from the command.
@@ -28,14 +28,13 @@ fn test_sync_mode_failure() {
     let assert = smol_cmd(&temp)
         .arg("--sync").arg("false")
         .assert();
-    // `false` exits 1, and smol propagates that exit code
-    // stdout still shows the summary
+    // `false` exits 1, empty stdout falls through to summary
     assert
         .code(1)
         .stdout(predicate::str::contains("success").or(predicate::str::contains("done")));
 }
 
-/// Auto mode (default): fast command should complete and show summary.
+/// Auto mode (default): fast command should complete and pass through output.
 #[test]
 fn test_auto_mode_fast_command() {
     let temp = TempDir::new().unwrap();
@@ -43,7 +42,7 @@ fn test_auto_mode_fast_command() {
         .arg("echo").arg("hello-auto")
         .assert()
         .success()
-        .stdout(predicate::str::contains("success"));
+        .stdout(predicate::str::contains("hello-auto"));
 }
 
 /// Auto mode with explicit --auto flag.
@@ -54,7 +53,7 @@ fn test_auto_mode_explicit_flag() {
         .arg("--auto").arg("echo").arg("hello-auto-flag")
         .assert()
         .success()
-        .stdout(predicate::str::contains("success"));
+        .stdout(predicate::str::contains("hello-auto-flag"));
 }
 
 /// Background mode: should print task-id and return 0.
@@ -150,10 +149,10 @@ fn test_auto_mode_slow_command() {
         .arg("--auto").arg("echo").arg("still-fast")
         .assert()
         .success()
-        .stdout(predicate::str::contains("success"));
+        .stdout(predicate::str::contains("still-fast"));
 }
 
-/// Interactive mode: basic echo command should complete and show success.
+/// Interactive mode: basic echo command should complete and pass through output.
 #[test]
 fn test_interactive_mode_completes() {
     let temp = TempDir::new().unwrap();
@@ -161,7 +160,7 @@ fn test_interactive_mode_completes() {
         .arg("--interactive").arg("echo").arg("hello-interactive")
         .assert()
         .success()
-        .stdout(predicate::str::contains("success"));
+        .stdout(predicate::str::contains("hello-interactive"));
 }
 
 /// Interactive mode: non-zero exit code propagates.
@@ -184,7 +183,7 @@ fn test_interactive_short_flag() {
         .arg("--int").arg("echo").arg("short-flag")
         .assert()
         .success()
-        .stdout(predicate::str::contains("success"));
+        .stdout(predicate::str::contains("short-flag"));
 }
 
 /// Interactive mode: Maven test fixture with mixed build errors + test failures.

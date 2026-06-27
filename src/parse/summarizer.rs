@@ -16,18 +16,20 @@ pub fn trim_summary(mut summary: Summary, max_errors: usize, max_warnings: usize
 pub fn format_summary(summary: &Summary, raw_stdout: Option<&str>, raw_stderr: Option<&str>) -> String {
     // Pass-through: if raw output is small, return it directly
     if let Some(stdout) = raw_stdout {
-        let line_count = stdout.lines().count();
-        if line_count <= 10 && stdout.len() <= 500 {
-            let mut result = stdout.to_string();
-            if let Some(stderr) = raw_stderr {
-                if !stderr.is_empty() {
-                    if !result.is_empty() && !result.ends_with('\n') {
-                        result.push('\n');
+        if !stdout.is_empty() {
+            let line_count = stdout.lines().count();
+            if line_count <= 10 && stdout.len() <= 500 {
+                let mut result = stdout.to_string();
+                if let Some(stderr) = raw_stderr {
+                    if !stderr.is_empty() {
+                        if !result.is_empty() && !result.ends_with('\n') {
+                            result.push('\n');
+                        }
+                        result.push_str(stderr);
                     }
-                    result.push_str(stderr);
                 }
+                return result;
             }
-            return result;
         }
     }
 
