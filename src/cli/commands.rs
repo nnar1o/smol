@@ -128,7 +128,7 @@ fn execute_run(command: Vec<String>, mode: Mode) -> Result<i32, SmolError> {
                 global_config.max_warnings,
             )?;
 
-            let formatted = parse::summarizer::format_summary(&summary);
+            let formatted = parse::summarizer::format_summary(&summary, Some(&result.stdout), Some(&result.stderr));
             println!("{}", formatted);
             Ok(result.exit_code.unwrap_or(1))
         }
@@ -151,7 +151,7 @@ fn execute_run(command: Vec<String>, mode: Mode) -> Result<i32, SmolError> {
                 global_config.max_warnings,
             )?;
 
-            let formatted = parse::summarizer::format_summary(&summary);
+            let formatted = parse::summarizer::format_summary(&summary, Some(&result.stdout), Some(&result.stderr));
             println!("{}", formatted);
             Ok(result.exit_code.unwrap_or(1))
         }
@@ -170,7 +170,7 @@ fn execute_run(command: Vec<String>, mode: Mode) -> Result<i32, SmolError> {
                         global_config.max_errors,
                         global_config.max_warnings,
                     )?;
-                    let formatted = parse::summarizer::format_summary(&summary);
+                    let formatted = parse::summarizer::format_summary(&summary, Some(&result.stdout), Some(&result.stderr));
                     println!("{}", formatted);
                     Ok(result.exit_code.unwrap_or(1))
                 }

@@ -158,7 +158,7 @@ fn test_sync_flag() {
     cmd.arg("--sync").arg("echo").arg("hello-sync");
     cmd.assert()
         .success()
-        .stdout(predicate::str::contains("success"));
+        .stdout(predicate::str::contains("hello-sync"));
 }
 
 /// Test that `--bg` flag before a command is recognized.
@@ -178,7 +178,7 @@ fn test_mode_sync_flag() {
     cmd.arg("--mode").arg("sync").arg("echo").arg("hello-mode");
     cmd.assert()
         .success()
-        .stdout(predicate::str::contains("success"));
+        .stdout(predicate::str::contains("hello-mode"));
 }
 
 /// Test that `--auto` flag is recognized.
@@ -188,7 +188,7 @@ fn test_auto_flag() {
     cmd.arg("--auto").arg("echo").arg("hello-auto");
     cmd.assert()
         .success()
-        .stdout(predicate::str::contains("success").or(predicate::str::contains("done")));
+        .stdout(predicate::str::contains("hello-auto"));
 }
 
 /// Test that `smol completion` defaults to bash.

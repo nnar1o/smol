@@ -5,7 +5,7 @@ use smol::parse::summarizer;
 #[test]
 fn test_format_empty_summary() {
     let s = Summary::default();
-    let out = summarizer::format_summary(&s);
+    let out = summarizer::format_summary(&s, None, None);
     assert_eq!(out, "done");
 }
 
@@ -24,7 +24,7 @@ fn test_format_success_with_errors() {
         file_line: Some(42),
         column: None,
     });
-    let out = summarizer::format_summary(&s);
+    let out = summarizer::format_summary(&s, None, None);
     assert!(out.contains("success"));
     assert!(out.contains("errors:3"));
     assert!(out.contains("test.rs:42"));
@@ -39,7 +39,7 @@ fn test_format_large_tokens() {
         output_tokens: 50_000,
         ..Default::default()
     };
-    let out = summarizer::format_summary(&s);
+    let out = summarizer::format_summary(&s, None, None);
     assert!(out.starts_with("success"));
 }
 
@@ -52,8 +52,33 @@ fn test_format_token_expansion() {
         output_tokens: 50,
         ..Default::default()
     };
-    let out = summarizer::format_summary(&s);
+    let out = summarizer::format_summary(&s, None, None);
     assert!(out.starts_with("failure"));
+}
+
+/// Test pass-through of small raw stdout.
+#[test]
+fn test_format_pass_through_small_output() {
+    let s = Summary::default();
+    let out = summarizer::format_summary(&s, Some("hello world"), None);
+    assert_eq!(out, "hello world");
+}
+
+/// Test pass-through includes stderr when present.
+#[test]
+fn test_format_pass_through_with_stderr() {
+    let s = Summary::default();
+    let out = summarizer::format_summary(&s, Some("a"), Some("b"));
+    assert_eq!(out, "a\nb");
+}
+
+/// Test large output still gets summarized.
+#[test]
+fn test_format_no_pass_through_large_output() {
+    let s = Summary::default();
+    let big = "line\n".repeat(20);
+    let out = summarizer::format_summary(&s, Some(&big), None);
+    assert_eq!(out, "done");
 }
 
 /// Test trim_summary with empty summary.
@@ -151,7 +176,7 @@ fn test_format_errors_without_file() {
         file_line: None,
         column: None,
     });
-    let out = summarizer::format_summary(&s);
+    let out = summarizer::format_summary(&s, None, None);
     assert!(out.contains("- generic error"));
 }
 
@@ -184,7 +209,7 @@ fn test_format_multiple_error_files() {
         file_line: None,
         column: None,
     });
-    let out = summarizer::format_summary(&s);
+    let out = summarizer::format_summary(&s, None, None);
     assert!(out.contains("main.rs:10"));
     assert!(out.contains("lib.rs:25"));
     assert!(out.contains("- missing semicolon"));

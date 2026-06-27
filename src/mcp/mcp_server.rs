@@ -236,7 +236,7 @@ fn handle_tools_list(request: &JsonRpcRequest) -> JsonRpcResponse {
     let tools = json!([
         {
             "name": "smol_run",
-            "description": "Execute a command and return a summarized analysis of the output. Use 'sync' mode to wait for completion (best for fast commands), 'auto' mode to wait briefly then fall back to background if the command takes too long (default), or 'bg' mode to run immediately in the background. Returns a summary with task_id, exit_code, and status. For background tasks, use smol_status to check progress and smol_log to retrieve output.",
+            "description": "Execute a command and return a summarized analysis of the output. Use 'sync' mode to wait for completion (best for fast commands), 'auto' mode to wait briefly then fall back to background if the command takes too long (default), or 'bg' mode to run immediately in the background.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -248,7 +248,7 @@ fn handle_tools_list(request: &JsonRpcRequest) -> JsonRpcResponse {
                     "mode": {
                         "type": "string",
                         "enum": ["sync", "auto", "bg", "background"],
-                        "description": "Execution mode: sync (wait for completion), auto (wait briefly then background), bg (immediate background)",
+                        "description": "Execution mode: sync (wait), auto (wait briefly then bg), bg (immediate background)",
                         "default": "auto"
                     }
                 },
@@ -256,122 +256,66 @@ fn handle_tools_list(request: &JsonRpcRequest) -> JsonRpcResponse {
             }
         },
         {
-            "name": "smol_status",
-            "description": "Get the status and metadata of a task by its task_id. Use 'last' as the task_id to query the most recently created task. Returns full task metadata including status (running/success/failed/cancelled/timed_out), exit_code, duration, error_count, warning_count, and test results if available.",
+            "name": "smol_help",
+            "description": "Get guidance for the AI on how to effectively use smol for different tasks. Ask about 'general' usage, 'parsers', 'modes', 'maven', 'cargo', 'status', or 'patterns' to get targeted instructions on how to interact with smol and interpret its output.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "task_id": {
+                    "topic": {
                         "type": "string",
-                        "description": "Task ID, or 'last' for the most recent task"
+                        "description": "Help topic: 'general', 'parsers', 'modes', 'maven', 'cargo', 'python', 'npm', 'status', 'patterns'"
                     }
                 },
-                "required": ["task_id"]
+                "required": ["topic"]
             }
         },
         {
-            "name": "smol_log",
-            "description": "Retrieve the log output of a task. By default returns the full output log. Set 'errors' to true to filter for error lines only, or 'warnings' to true for warning lines only. Set 'stats' to true to return task metadata as JSON instead of log text. Use 'tail' to return only the last N lines and 'max_chars' to limit total output size.",
+            "name": "smol_oracle",
+            "description": "Unified tool for all task management: check status, view logs/filter errors, cancel tasks, list tasks, clean old tasks, or wait for background completion. Use the 'action' parameter to choose the operation and 'task_id' (or 'last') to target a specific task.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
+                    "action": {
+                        "type": "string",
+                        "enum": ["status", "log", "errors", "warnings", "cancel", "list", "clean", "wait"],
+                        "description": "Operation to perform: status (task metadata), log (raw output), errors (error lines only), warnings (warning lines only), cancel (kill task), list (all tasks), clean (remove old tasks), wait (poll until done)"
+                    },
                     "task_id": {
                         "type": "string",
-                        "description": "Task ID, or 'last' for the most recent task"
-                    },
-                    "errors": {
-                        "type": "boolean",
-                        "description": "Show only lines containing errors",
-                        "default": false
-                    },
-                    "warnings": {
-                        "type": "boolean",
-                        "description": "Show only lines containing warnings",
-                        "default": false
-                    },
-                    "stats": {
-                        "type": "boolean",
-                        "description": "Return task metadata as JSON instead of log text",
-                        "default": false
+                        "description": "Task ID or 'last' for most recent. Required for: status, log, errors, warnings, cancel, wait."
                     },
                     "tail": {
                         "type": "integer",
-                        "description": "Return only the last N lines of the log. 0 means no limit.",
+                        "description": "Return only last N lines (for log/errors/warnings)",
                         "default": 0
                     },
                     "max_chars": {
                         "type": "integer",
-                        "description": "Truncate output to at most this many characters. 0 means no limit.",
+                        "description": "Truncate output to N chars (for log/errors/warnings)",
                         "default": 0
-                    }
-                },
-                "required": ["task_id"]
-            }
-        },
-        {
-            "name": "smol_list",
-            "description": "List all stored tasks, optionally filtered to show only running tasks. Set 'running' to true to see only currently executing tasks. Returns an array of task metadata objects.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
+                    },
                     "running": {
                         "type": "boolean",
-                        "description": "If true, show only running tasks",
+                        "description": "Show only running tasks (for list action)",
                         "default": false
-                    }
-                }
-            }
-        },
-        {
-            "name": "smol_cancel",
-            "description": "Cancel a running task by sending SIGTERM to its process. The task_id must correspond to a currently running background task. Returns success status after sending the signal. Note: the process may take a moment to terminate after cancellation.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "task_id": {
+                    },
+                    "older": {
                         "type": "string",
-                        "description": "Task ID, or 'last' for the most recent task"
-                    }
-                },
-                "required": ["task_id"]
-            }
-        },
-        {
-            "name": "smol_wait",
-            "description": "Wait for a background task to complete. Polls the task status at intervals until the task reaches a terminal state (success/failed/cancelled/timed_out) or the timeout is reached. Returns the final task metadata if completed, or the current metadata if the timeout expired.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "task_id": {
-                        "type": "string",
-                        "description": "Task ID, or 'last' for the most recent task"
+                        "description": "Age threshold like '24h', '7d', '30m' (for clean action)",
+                        "default": "24h"
                     },
                     "timeout": {
                         "type": "integer",
-                        "description": "Maximum seconds to wait (default 60)",
+                        "description": "Max seconds to wait (for wait action)",
                         "default": 60
                     },
                     "interval": {
                         "type": "integer",
-                        "description": "Seconds between status polls (default 2)",
+                        "description": "Seconds between polls (for wait action)",
                         "default": 2
                     }
                 },
-                "required": ["task_id"]
-            }
-        },
-        {
-            "name": "smol_clean",
-            "description": "Remove old completed, failed, or cancelled tasks from storage to free disk space. The 'older' parameter accepts duration strings like '24h' (hours), '7d' (days), '30m' (minutes), '3600s' (seconds), or plain seconds. Only non-running tasks are removed. Default is '24h'.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "older": {
-                        "type": "string",
-                        "description": "Age threshold such as '24h', '7d', '30m', or plain seconds",
-                        "default": "24h"
-                    }
-                }
+                "required": ["action"]
             }
         }
     ]);
@@ -417,12 +361,8 @@ fn handle_tools_call(request: &JsonRpcRequest) -> JsonRpcResponse {
 
     let result = match name {
         "smol_run" => handle_smol_run(&arguments),
-        "smol_status" => handle_smol_status(&arguments),
-        "smol_log" => handle_smol_log(&arguments),
-        "smol_list" => handle_smol_list(&arguments),
-        "smol_cancel" => handle_smol_cancel(&arguments),
-        "smol_clean" => handle_smol_clean(&arguments),
-        "smol_wait" => handle_smol_wait(&arguments),
+        "smol_help" => handle_smol_help(&arguments),
+        "smol_oracle" => handle_smol_oracle(&arguments),
         _ => {
             return protocol::make_error(
                 request.id.clone(),
@@ -644,7 +584,7 @@ fn run_sync_op(
         protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, format!("Output parsing failed: {}", e))
     })?;
 
-    let formatted = parse::summarizer::format_summary(&summary);
+    let formatted = parse::summarizer::format_summary(&summary, Some(&result.stdout), Some(&result.stderr));
     let task_id = TaskId::new();
 
     let meta = make_completed_meta(task_id.clone(), &command.join(" "), TaskMode::Sync, &result, &summary);
@@ -730,7 +670,7 @@ fn run_auto_op(
                 )
             })?;
 
-            let formatted = parse::summarizer::format_summary(&summary);
+            let formatted = parse::summarizer::format_summary(&summary, Some(&result.stdout), Some(&result.stderr));
             let task_id = TaskId::new();
             let meta = make_completed_meta(task_id.clone(), &command.join(" "), TaskMode::Auto, &result, &summary);
             write_task_output(tasks_dir, &task_id, &result.stdout, &result.stderr);
@@ -753,48 +693,143 @@ fn run_auto_op(
     }
 }
 
-fn handle_smol_status(args: &Value) -> Result<Value, protocol::JsonRpcErrorObj> {
-    let task_id_str = args
-        .get("task_id")
+fn handle_smol_help(args: &Value) -> Result<Value, protocol::JsonRpcErrorObj> {
+    let topic = args
+        .get("topic")
         .and_then(|v| v.as_str())
-        .ok_or_else(|| {
-            protocol::JsonRpcErrorObj::new(protocol::INVALID_PARAMS, "Missing 'task_id' parameter")
-        })?;
+        .unwrap_or("general");
 
-    let cfg = config::load_global_config().map_err(|e| {
-        protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, format!("Failed to load config: {}", e))
-    })?;
-    let tasks_dir = get_tasks_dir(&cfg);
-    storage::init(&tasks_dir).map_err(|e| {
-        protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, format!("Storage init failed: {}", e))
-    })?;
+    let help_text = match topic {
+        "general" => r#"smol — Smart Minimal Output Logger
 
-    let id = resolve_task_id(task_id_str, &tasks_dir).map_err(|e| {
-        let msg = format!("{}", e);
-        protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, msg)
-    })?;
+smol wraps command execution, captures output, parses errors/warnings, and returns concise summaries. It is designed for AI agent use.
 
-    let meta = storage::load_task_meta(&id, &tasks_dir).map_err(|e| {
-        let msg = format!("{}", e);
-        protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, msg)
-    })?;
+Key concepts:
+- Run commands with smol_run, get a structured summary back
+- Each execution creates a task with a short task_id (8 chars)
+- Tasks can run synchronously (sync), auto (brief wait then background), or background (bg)
+- Use smol_oracle to inspect tasks: status, logs, errors, warnings, cancel, list, clean
+- All raw output is saved — you can always retrieve it later"#.to_string(),
 
-    Ok(serde_json::to_value(&meta).unwrap_or_default())
+        "modes" => r#"Execution modes in smol
+
+sync  — Wait for command to finish. Returns summary + task_id + exit_code.
+        Best for: fast commands (<5s), critical builds where you need the result now.
+
+auto  — Default. Wait briefly (configurable, ~5s). If command finishes, return summary.
+        If still running, detach to background and return task_id.
+        Best for: typical use — fast commands complete immediately, slow ones don't block.
+
+bg / background — Launch immediately in background, return task_id at once.
+        Best for: long builds, test suites, docker builds, anything >30s.
+
+Interactive mode (smol -i <command>) shows a spinner and compact output.
+Use smol_oracle action=wait to poll a background task until it completes."#.to_string(),
+
+        "parsers" => r#"smol has 35 built-in parsers that detect patterns in command output:
+
+Build tools:    maven, gradle, cargo, make, cmake, go, rustc, gcc, tsc, vite
+Package mgrs:  npm, pnpm, yarn, pip
+DevOps:        docker, docker-compose, kubectl, helm, terraform, ansible
+Cloud:         aws, gh
+Database:      psql
+Search:        find, grep, jq
+System:        systemctl, curl, node, python, ruby, git
+Linters:       eslint
+
+Parser auto-detection works by command name prefix.
+If no parser matches, the generic fallback catches file:line:col errors,
+tracebacks, ERROR/WARNING keywords, and exit codes."#.to_string(),
+
+        "maven" => r#"Building Maven projects with smol
+
+smol_run with command ["mvn", "clean", "install"] in sync or auto mode.
+smol parses Maven output (INFO/ERROR/WARNING lines), detects BUILD SUCCESS/FAILURE,
+and extracts Surefire/Failsafe test results.
+
+If the build is long, use auto mode — it returns a task_id immediately after 5s,
+and you can check progress with smol_oracle action=status task_id=<id>.
+Then retrieve errors/warnings with action=errors or action=warnings."#.to_string(),
+
+        "cargo" => r#"Building Rust projects with smol
+
+smol_run with command ["cargo", "build"] or ["cargo", "test"].
+smol detects Cargo output, parses rustc errors (file:line:col: error),
+warnings, and test results (test result: ok / FAILED).
+
+For cargo test, smol extracts test counts (passed/failed/ignored) and
+shows first N failures in the summary."#.to_string(),
+
+        "python" => r#"Running Python with smol
+
+smol_run with command ["python", "script.py"] or ["pytest", "tests/"].
+smol detects Python tracebacks (Traceback (most recent call last)),
+pip output, and pytest results.
+
+Python tracebacks are multiline — smol groups the traceback lines
+into single error entries with the final exception message."#.to_string(),
+
+        "npm" => r#"Running npm/pnpm/yarn with smol
+
+smol_run with command ["npm", "run", "build"] or ["npx", "tsc", "--noEmit"].
+smol detects npm errors (ERR!, ELIFECYCLE), warnings, and build output.
+npm test output is also parsed when pytest patterns appear."#.to_string(),
+
+        "status" => r#"How to interpret smol status output
+
+smol_oracle action=status task_id=<id> returns:
+- status: running | success | failed | cancelled | timed_out
+- exit_code: numeric exit code (None if still running)
+- error_count / warning_count: number of detected issues
+- duration_sec: how long the task ran
+- test_total / test_passed / test_failed: if test output was detected
+
+Actions for investigating tasks:
+  action=errors   — show only error lines from the log
+  action=warnings — show only warning lines
+  action=log      — show the full raw output
+  action=cancel   — send SIGTERM to a running task
+
+Use tail=<N> to see only the last N lines.
+Use max_chars=<N> to limit output size."#.to_string(),
+
+        "patterns" => r#"Common smol usage patterns for AI agents
+
+1. Fast build check:
+   smol_run command=["make", "-j4"]
+   → Instant summary: success with 0 errors, 2 warnings
+
+2. Long build — poll later:
+   smol_run command=["mvn", "clean", "install"] mode=auto
+   → task_id: a3f9k2 (running in background)
+   smol_oracle action=wait task_id=a3f9k2 timeout=120
+   → Status: completed, check errors/warnings
+
+3. Investigate failures:
+   smol_oracle action=errors task_id=a3f9k2 tail=20
+   → Last 20 error lines
+
+4. Cleanup old tasks:
+   smol_oracle action=clean older=7d
+   → Removed 15 old tasks
+
+5. List running tasks:
+   smol_oracle action=list running=true
+   → Shows all currently executing tasks"#.to_string(),
+
+        _ => format!("Unknown help topic: {}. Available topics: general, parsers, modes, maven, cargo, python, npm, status, patterns", topic),
+    };
+
+    Ok(json!({ "help": help_text }))
 }
 
-fn handle_smol_log(args: &Value) -> Result<Value, protocol::JsonRpcErrorObj> {
-    let task_id_str = args
-        .get("task_id")
+fn handle_smol_oracle(args: &Value) -> Result<Value, protocol::JsonRpcErrorObj> {
+    let action = args
+        .get("action")
         .and_then(|v| v.as_str())
         .ok_or_else(|| {
-            protocol::JsonRpcErrorObj::new(protocol::INVALID_PARAMS, "Missing 'task_id' parameter")
+            protocol::JsonRpcErrorObj::new(protocol::INVALID_PARAMS, "Missing 'action' parameter")
         })?;
-
-    let errors = args.get("errors").and_then(|v| v.as_bool()).unwrap_or(false);
-    let warnings = args.get("warnings").and_then(|v| v.as_bool()).unwrap_or(false);
-    let stats = args.get("stats").and_then(|v| v.as_bool()).unwrap_or(false);
-    let tail = args.get("tail").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
-    let max_chars = args.get("max_chars").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
 
     let cfg = config::load_global_config().map_err(|e| {
         protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, format!("Failed to load config: {}", e))
@@ -804,213 +839,128 @@ fn handle_smol_log(args: &Value) -> Result<Value, protocol::JsonRpcErrorObj> {
         protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, format!("Storage init failed: {}", e))
     })?;
 
-    let id = resolve_task_id(task_id_str, &tasks_dir).map_err(|e| {
-        let msg = format!("{}", e);
-        protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, msg)
-    })?;
-
-    // If stats requested, return the full metadata as JSON
-    if stats {
-        let meta = storage::load_task_meta(&id, &tasks_dir).map_err(|e| {
-            let msg = format!("{}", e);
-            protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, msg)
-        })?;
-        return Ok(serde_json::to_value(&meta).unwrap_or_default());
-    }
-
-    // Read the log file
-    let log_path = std::path::Path::new(&tasks_dir)
-        .join(id.as_str())
-        .join("output.log");
-    let output = if log_path.exists() {
-        std::fs::read_to_string(&log_path).unwrap_or_default()
-    } else {
-        String::new()
-    };
-
-    let filtered: String = if errors {
-        output
-            .lines()
-            .filter(|l| {
-                l.contains("error")
-                    || l.contains("ERROR")
-                    || l.contains("Error")
-            })
-            .collect::<Vec<_>>()
-            .join("\n")
-    } else if warnings {
-        output
-            .lines()
-            .filter(|l| {
-                l.contains("warning")
-                    || l.contains("WARNING")
-                    || l.contains("Warning")
-            })
-            .collect::<Vec<_>>()
-            .join("\n")
-    } else {
-        output
-    };
-
-    let filtered = if tail > 0 {
-        let lines: Vec<&str> = filtered.lines().collect();
-        let start = lines.len().saturating_sub(tail);
-        lines[start..].join("\n")
-    } else {
-        filtered
-    };
-
-    let filtered = if max_chars > 0 && filtered.len() > max_chars {
-        let mut truncated = filtered[..max_chars].to_string();
-        // Avoid splitting in the middle of a line
-        if let Some(pos) = truncated.rfind('\n') {
-            truncated.truncate(pos);
+    match action {
+        "list" => {
+            let running_only = args.get("running").and_then(|v| v.as_bool()).unwrap_or(false);
+            let mut tasks = storage::list_tasks(&tasks_dir, None).map_err(|e| {
+                protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, format!("{}", e))
+            })?;
+            if running_only {
+                tasks.retain(|t| t.status == TaskStatus::Running);
+            }
+            Ok(serde_json::to_value(&tasks).unwrap_or_default())
         }
-        truncated.push_str(&format!("\n... [truncated, {} of {} chars shown]", max_chars, filtered.len()));
-        truncated
-    } else {
-        filtered
-    };
 
-    Ok(json!({ "log": filtered }))
-}
+        "clean" => {
+            let older = args.get("older").and_then(|v| v.as_str()).unwrap_or("24h");
+            let secs = parse_duration(older).map_err(|e| {
+                protocol::JsonRpcErrorObj::new(protocol::INVALID_PARAMS, format!("{}", e))
+            })?;
+            let count = storage::clean_older_than(&tasks_dir, secs).map_err(|e| {
+                protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, format!("{}", e))
+            })?;
+            send_log_notification(LOG_INFO, "info", "smol-mcp", json!({
+                "message": format!("Cleaned up {} task(s)", count)
+            }));
+            Ok(json!({ "cleaned": count, "message": format!("Cleaned up {} task(s).", count) }))
+        }
 
-fn handle_smol_list(args: &Value) -> Result<Value, protocol::JsonRpcErrorObj> {
-    let running_only = args.get("running").and_then(|v| v.as_bool()).unwrap_or(false);
+        "status" | "log" | "errors" | "warnings" | "cancel" | "wait" => {
+            let task_id_str = args.get("task_id").and_then(|v| v.as_str()).ok_or_else(|| {
+                protocol::JsonRpcErrorObj::new(protocol::INVALID_PARAMS, "Missing 'task_id' for this action")
+            })?;
+            let id = resolve_task_id(task_id_str, &tasks_dir).map_err(|e| {
+                protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, format!("{}", e))
+            })?;
 
-    let cfg = config::load_global_config().map_err(|e| {
-        protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, format!("Failed to load config: {}", e))
-    })?;
-    let tasks_dir = get_tasks_dir(&cfg);
-    storage::init(&tasks_dir).map_err(|e| {
-        protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, format!("Storage init failed: {}", e))
-    })?;
+            match action {
+                "status" => {
+                    let meta = storage::load_task_meta(&id, &tasks_dir).map_err(|e| {
+                        protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, format!("{}", e))
+                    })?;
+                    Ok(serde_json::to_value(&meta).unwrap_or_default())
+                }
 
-    let mut tasks = storage::list_tasks(&tasks_dir, None).map_err(|e| {
-        let msg = format!("{}", e);
-        protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, msg)
-    })?;
+                "cancel" => {
+                    storage::cancel_task(&id, &tasks_dir).map_err(|e| {
+                        protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, format!("{}", e))
+                    })?;
+                    Ok(json!({ "success": true, "task_id": id.to_string(), "message": format!("Task {} cancelled.", id) }))
+                }
 
-    if running_only {
-        tasks.retain(|t| t.status == TaskStatus::Running);
+                "wait" => do_wait(&id, &tasks_dir, args),
+
+                _ => {
+                    let tail = args.get("tail").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
+                    let max_chars = args.get("max_chars").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
+                    let filter_errors = action == "errors";
+                    let filter_warnings = action == "warnings";
+
+                    let log_path = std::path::Path::new(&tasks_dir).join(id.as_str()).join("output.log");
+                    let output = if log_path.exists() {
+                        std::fs::read_to_string(&log_path).unwrap_or_default()
+                    } else {
+                        String::new()
+                    };
+
+                    let filtered: String = if filter_errors {
+                        output.lines().filter(|l| {
+                            l.contains("error") || l.contains("ERROR") || l.contains("Error")
+                        }).collect::<Vec<_>>().join("\n")
+                    } else if filter_warnings {
+                        output.lines().filter(|l| {
+                            l.contains("warning") || l.contains("WARNING") || l.contains("Warning")
+                        }).collect::<Vec<_>>().join("\n")
+                    } else {
+                        output
+                    };
+
+                    let filtered = if tail > 0 {
+                        let lines: Vec<&str> = filtered.lines().collect();
+                        let start = lines.len().saturating_sub(tail);
+                        lines[start..].join("\n")
+                    } else {
+                        filtered
+                    };
+
+                    let filtered = if max_chars > 0 && filtered.len() > max_chars {
+                        let mut truncated = filtered[..max_chars].to_string();
+                        if let Some(pos) = truncated.rfind('\n') {
+                            truncated.truncate(pos);
+                        }
+                        truncated.push_str(&format!("\n... [truncated, {} of {} chars shown]", max_chars, filtered.len()));
+                        truncated
+                    } else {
+                        filtered
+                    };
+
+                    Ok(json!({ "log": filtered }))
+                }
+            }
+        }
+
+        _ => Err(protocol::JsonRpcErrorObj::new(
+            protocol::INVALID_PARAMS,
+            format!("Unknown action: {}. Use: status, log, errors, warnings, cancel, list, clean, wait", action),
+        )),
     }
-
-    Ok(serde_json::to_value(&tasks).unwrap_or_default())
 }
 
-fn handle_smol_cancel(args: &Value) -> Result<Value, protocol::JsonRpcErrorObj> {
-    let task_id_str = args
-        .get("task_id")
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| {
-            protocol::JsonRpcErrorObj::new(protocol::INVALID_PARAMS, "Missing 'task_id' parameter")
-        })?;
-
-    let cfg = config::load_global_config().map_err(|e| {
-        protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, format!("Failed to load config: {}", e))
-    })?;
-    let tasks_dir = get_tasks_dir(&cfg);
-    storage::init(&tasks_dir).map_err(|e| {
-        protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, format!("Storage init failed: {}", e))
-    })?;
-
-    let id = resolve_task_id(task_id_str, &tasks_dir).map_err(|e| {
-        let msg = format!("{}", e);
-        protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, msg)
-    })?;
-
-    storage::cancel_task(&id, &tasks_dir).map_err(|e| {
-        let msg = format!("{}", e);
-        protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, msg)
-    })?;
-
-    Ok(json!({
-        "success": true,
-        "task_id": id.to_string(),
-        "message": format!("Task {} cancelled.", id),
-    }))
-}
-
-fn handle_smol_clean(args: &Value) -> Result<Value, protocol::JsonRpcErrorObj> {
-    let older = args
-        .get("older")
-        .and_then(|v| v.as_str())
-        .unwrap_or("24h");
-
-    let cfg = config::load_global_config().map_err(|e| {
-        protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, format!("Failed to load config: {}", e))
-    })?;
-    let tasks_dir = get_tasks_dir(&cfg);
-    storage::init(&tasks_dir).map_err(|e| {
-        protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, format!("Storage init failed: {}", e))
-    })?;
-
-    let secs = parse_duration(older).map_err(|e| {
-        let msg = format!("{}", e);
-        protocol::JsonRpcErrorObj::new(protocol::INVALID_PARAMS, msg)
-    })?;
-
-    let count = storage::clean_older_than(&tasks_dir, secs).map_err(|e| {
-        let msg = format!("{}", e);
-        protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, msg)
-    })?;
-
-    send_log_notification(LOG_INFO, "info", "smol-mcp", json!({
-        "message": format!("Cleaned up {} task(s)", count)
-    }));
-
-    Ok(json!({
-        "cleaned": count,
-        "message": format!("Cleaned up {} task(s).", count),
-    }))
-}
-
-fn handle_smol_wait(args: &Value) -> Result<Value, protocol::JsonRpcErrorObj> {
-    let task_id_str = args
-        .get("task_id")
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| {
-            protocol::JsonRpcErrorObj::new(protocol::INVALID_PARAMS, "Missing 'task_id' parameter")
-        })?;
-
-    let timeout_secs: u64 = args
-        .get("timeout")
-        .and_then(|v| v.as_i64())
-        .unwrap_or(60) as u64;
-    let interval_secs: u64 = args
-        .get("interval")
-        .and_then(|v| v.as_i64())
-        .unwrap_or(2) as u64;
+fn do_wait(id: &TaskId, tasks_dir: &str, args: &Value) -> Result<Value, protocol::JsonRpcErrorObj> {
+    let timeout_secs: u64 = args.get("timeout").and_then(|v| v.as_i64()).unwrap_or(60) as u64;
+    let interval_secs: u64 = args.get("interval").and_then(|v| v.as_i64()).unwrap_or(2) as u64;
 
     if interval_secs == 0 {
-        return Err(protocol::JsonRpcErrorObj::new(
-            protocol::INVALID_PARAMS,
-            "Interval must be greater than 0",
-        ));
+        return Err(protocol::JsonRpcErrorObj::new(protocol::INVALID_PARAMS, "Interval must be greater than 0"));
     }
 
-    let cfg = config::load_global_config().map_err(|e| {
-        protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, format!("Failed to load config: {}", e))
-    })?;
-    let tasks_dir = get_tasks_dir(&cfg);
-    storage::init(&tasks_dir).map_err(|e| {
-        protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, format!("Storage init failed: {}", e))
-    })?;
-
-    let id = resolve_task_id(task_id_str, &tasks_dir).map_err(|e| {
-        let msg = format!("{}", e);
-        protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, msg)
-    })?;
-
     let progress_token = args.get("_progressToken").cloned();
-
     let start = std::time::Instant::now();
     let timeout_dur = std::time::Duration::from_secs(timeout_secs);
 
     loop {
-        let meta = storage::load_task_meta(&id, &tasks_dir).map_err(|e| {
-            let msg = format!("{}", e);
-            protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, msg)
+        let meta = storage::load_task_meta(id, tasks_dir).map_err(|e| {
+            protocol::JsonRpcErrorObj::new(protocol::INTERNAL_ERROR, format!("{}", e))
         })?;
 
         if meta.status.is_terminal() {
@@ -1038,7 +988,6 @@ fn handle_smol_wait(args: &Value) -> Result<Value, protocol::JsonRpcErrorObj> {
             return Ok(value);
         }
 
-        // Send progress notification between polls
         if let Some(ref token) = progress_token {
             let elapsed = start.elapsed().as_secs();
             write_notification("notifications/progress", json!({
@@ -1268,18 +1217,10 @@ mod tests {
             .as_array()
             .expect("tools should be an array");
 
-        assert_eq!(tools.len(), 7);
+        assert_eq!(tools.len(), 3);
 
         let names: Vec<&str> = tools.iter().filter_map(|t| t["name"].as_str()).collect();
-        assert_eq!(names, vec![
-            "smol_run",
-            "smol_status",
-            "smol_log",
-            "smol_list",
-            "smol_cancel",
-            "smol_wait",
-            "smol_clean",
-        ]);
+        assert_eq!(names, vec!["smol_run", "smol_help", "smol_oracle"]);
 
         for tool in tools {
             assert!(tool["name"].is_string(), "tool missing name");

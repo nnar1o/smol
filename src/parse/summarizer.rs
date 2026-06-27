@@ -12,7 +12,25 @@ pub fn trim_summary(mut summary: Summary, max_errors: usize, max_warnings: usize
 }
 
 /// Format a summary into a human-readable string.
-pub fn format_summary(summary: &Summary) -> String {
+/// If raw output is provided and small (≤10 lines, ≤500 chars), pass it through directly.
+pub fn format_summary(summary: &Summary, raw_stdout: Option<&str>, raw_stderr: Option<&str>) -> String {
+    // Pass-through: if raw output is small, return it directly
+    if let Some(stdout) = raw_stdout {
+        let line_count = stdout.lines().count();
+        if line_count <= 10 && stdout.len() <= 500 {
+            let mut result = stdout.to_string();
+            if let Some(stderr) = raw_stderr {
+                if !stderr.is_empty() {
+                    if !result.is_empty() && !result.ends_with('\n') {
+                        result.push('\n');
+                    }
+                    result.push_str(stderr);
+                }
+            }
+            return result;
+        }
+    }
+
     let mut parts = Vec::new();
 
     match summary.status {
@@ -145,7 +163,7 @@ mod tests {
             status: SummaryStatus::Success,
             ..Default::default()
         };
-        let out = format_summary(&s);
+        let out = format_summary(&s, None, None);
         assert_eq!(out, "success");
     }
 
@@ -158,7 +176,7 @@ mod tests {
             compression_ratio: 0.25,
             ..Default::default()
         };
-        let out = format_summary(&s);
+        let out = format_summary(&s, None, None);
         assert_eq!(out, "success");
     }
 
@@ -171,18 +189,49 @@ mod tests {
             compression_ratio: 4.0,
             ..Default::default()
         };
-        let out = format_summary(&s);
+        let out = format_summary(&s, None, None);
         assert_eq!(out, "success");
     }
 
     #[test]
     fn test_format_summary_failure() {
         let s = sample_summary();
-        let out = format_summary(&s);
+        let out = format_summary(&s, None, None);
         assert!(out.contains("failure"));
         assert!(out.contains("errors:5"));
         assert!(out.contains("warnings:3"));
         assert!(out.contains("main.rs:42"));
+    }
+
+    #[test]
+    fn test_format_summary_pass_through_small_output() {
+        let s = Summary {
+            status: SummaryStatus::Success,
+            ..Default::default()
+        };
+        let out = format_summary(&s, Some("hello world\n"), None);
+        assert_eq!(out, "hello world\n");
+    }
+
+    #[test]
+    fn test_format_summary_pass_through_with_stderr() {
+        let s = Summary {
+            status: SummaryStatus::Success,
+            ..Default::default()
+        };
+        let out = format_summary(&s, Some("hello"), Some("warning: stuff"));
+        assert_eq!(out, "hello\nwarning: stuff");
+    }
+
+    #[test]
+    fn test_format_summary_no_pass_through_large_output() {
+        let s = Summary {
+            status: SummaryStatus::Success,
+            ..Default::default()
+        };
+        let big = "a\n".repeat(20);
+        let out = format_summary(&s, Some(&big), None);
+        assert_eq!(out, "success");
     }
 
     #[test]
