@@ -601,12 +601,29 @@ fn run_sync_op(
         "message": format!("Task {} completed with exit code {:?}", task_id, result.exit_code)
     }));
 
+    let raw_stdout = truncate_raw(&result.stdout);
+    let raw_stderr = truncate_raw(&result.stderr);
+
     Ok(json!({
         "summary": formatted,
         "task_id": task_id.to_string(),
         "exit_code": result.exit_code,
         "status": summary_status_to_task_status(&summary).as_str(),
+        "raw_stdout": raw_stdout,
+        "raw_stderr": raw_stderr,
     }))
+}
+
+fn truncate_raw(s: &str) -> Option<String> {
+    if s.is_empty() {
+        None
+    } else if s.len() > 2000 {
+        let mut t = s[..2000].to_string();
+        t.push_str(&format!("... (truncated {})", s.len()));
+        Some(t)
+    } else {
+        Some(s.to_string())
+    }
 }
 
 fn run_bg_op(command: &[String], tasks_dir: &str, max_output_bytes: u64) -> Result<Value, protocol::JsonRpcErrorObj> {
@@ -682,11 +699,15 @@ fn run_auto_op(
             };
             let _ = storage::save_task(&task);
 
+            let raw_stdout = truncate_raw(&result.stdout);
+            let raw_stderr = truncate_raw(&result.stderr);
             Ok(json!({
                 "summary": formatted,
                 "task_id": task_id.to_string(),
                 "exit_code": result.exit_code,
                 "status": summary_status_to_task_status(&summary).as_str(),
+                "raw_stdout": raw_stdout,
+                "raw_stderr": raw_stderr,
             }))
         }
         exec::watcher::WatchResult::NeedsBackground { .. } => run_bg_op(command, tasks_dir, cfg.max_output_bytes),
