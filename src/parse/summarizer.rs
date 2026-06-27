@@ -33,12 +33,15 @@ pub fn format_summary(summary: &Summary, raw_stdout: Option<&str>, raw_stderr: O
         }
     }
 
+    let has_details = summary.error_count > 0 || summary.warning_count > 0 || summary.tests.is_some();
     let mut parts = Vec::new();
 
-    match summary.status {
-        SummaryStatus::Success => parts.push("success".to_string()),
-        SummaryStatus::Failure => parts.push("failure".to_string()),
-        SummaryStatus::Unknown => parts.push("done".to_string()),
+    if !has_details {
+        match summary.status {
+            SummaryStatus::Success => parts.push("success".to_string()),
+            SummaryStatus::Failure => parts.push("failure".to_string()),
+            SummaryStatus::Unknown => parts.push("done".to_string()),
+        }
     }
 
     if summary.error_count > 0 {
@@ -48,7 +51,15 @@ pub fn format_summary(summary: &Summary, raw_stdout: Option<&str>, raw_stderr: O
         parts.push(format!("warnings:{}", summary.warning_count));
     }
 
-    let mut result = parts.join(" ");
+    let mut result = if parts.is_empty() {
+        match summary.status {
+            SummaryStatus::Success => "success".to_string(),
+            SummaryStatus::Failure => "failure".to_string(),
+            SummaryStatus::Unknown => "done".to_string(),
+        }
+    } else {
+        parts.join(" ")
+    };
 
     // Append test results if present
     if let Some(ref tests) = summary.tests {
@@ -199,7 +210,8 @@ mod tests {
     fn test_format_summary_failure() {
         let s = sample_summary();
         let out = format_summary(&s, None, None);
-        assert!(out.contains("failure"));
+        // Status prefix omitted when details are present
+        assert!(!out.contains("failure"));
         assert!(out.contains("errors:5"));
         assert!(out.contains("warnings:3"));
         assert!(out.contains("main.rs:42"));

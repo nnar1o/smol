@@ -25,7 +25,8 @@ fn test_format_success_with_errors() {
         column: None,
     });
     let out = summarizer::format_summary(&s, None, None);
-    assert!(out.contains("success"));
+    // Status prefix omitted when details are present
+    assert!(!out.contains("success"));
     assert!(out.contains("errors:3"));
     assert!(out.contains("test.rs:42"));
 }
